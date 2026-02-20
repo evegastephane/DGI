@@ -1,0 +1,30 @@
+{
+  "utilisateur": {
+    "id": "P120616628524A",
+    "nom": "ESSOMBA EVEGA ALOYS STEPHANE",
+    "initiales": "EE",
+    "role": "CONTRIBUABLE"
+  },
+  "dprListe": [
+    { "reference": "AV-GNR-220262371657", "annee": 2025 },
+    { "reference": "AV-GNR-220252468594", "annee": 2023 },
+    { "reference": "AV-GNR-220252841595", "annee": 2024 }
+  ],
+  "avisListe": [
+    { "reference": "AV-GNR-220262371657", "annee": 2025 },
+    { "reference": "AV-GNR-220252468594", "annee": 2023 }
+  ],
+  "amrListe": [],
+  "statistiques": {
+    "dprGenerees": { "valeur": 1, "pourcentage": 100 },
+    "dprSoumises": { "valeur": 1, "pourcentage": 100 }
+  },
+  "notifications": [
+    { "id": "n1", "message": "Déclaration IRPP 2024 disponible.", "lue": false },
+    { "id": "n2", "message": "Avis en attente de paiement.",       "lue": false }
+  ],
+  "infoBanniere": {
+    "visible": true,
+    "message": "Madame, Mademoiselle, Monsieur, la déclaration de l'Impot sur les Revenus des Personnes Physiques que vous allez souscrire est importante pour vous-même et pour le Cameroun."
+  }
+}
