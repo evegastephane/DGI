@@ -117,7 +117,7 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
 
             {/* ── Navigation ── */}
             <div style={{ flex: 1 }}>
-                <button style={navBtn(page === "dashboard")} onClick={() => setPage("dashboard")}>
+                <button style={ }>
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><HomeIcon /> Accueil</span>
                 </button>
                 <button style={navBtn(page === "dashboard")} onClick={() => setPage("dashboard")}>

@@ -10,7 +10,7 @@ import Footer  from "../app/components/layout/Footer";
 
 // ── Pages ─────────────────────────────────────────────────────────────────
 import PageDashboard          from "../app/dashboard/page";
-import { PageStep1, PageStep2 } from "../app/dashboard/declarations";
+import { PageStep1, PageStep2 } from "../app/declaration/page";
 
 // ── Données ───────────────────────────────────────────────────────────────
 import mockData from "./data/mockData.json";
