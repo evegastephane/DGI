@@ -77,20 +77,6 @@ export function PageStep1({ setPage }) {
                             <option value="2023">Exercice 2023</option>
                         </select>
                     </div>
-
-                    {/* Type de déclaration */}
-                    <div>
-                        <label style={{ fontSize: 13, fontWeight: 600, color: C.textMid, display: "block", marginBottom: 6 }}>
-                            Type de déclaration
-                        </label>
-                        <select value={typeDecl} onChange={(e) => setTypeDecl(e.target.value)}
-                                style={{ width: "100%", border: `1px solid ${C.border}`, borderRadius: 6, padding: "14px 16px", fontSize: 14, color: C.textMid, background: C.white, cursor: "pointer" }}>
-                            <option value="PATENTE">Patente</option>
-                            <option value="LICENCE">Licence</option>
-                            <option value="IGS">IGS</option>
-                            <option value="TDL">TDL</option>
-                        </select>
-                    </div>
                 </div>
             </div>
 
@@ -105,10 +91,10 @@ export function PageStep1({ setPage }) {
     );
 }
 
-// ════════════════════════════════════════════════════════════════════════
+
 // PageStep2 — Formulaire (onglets Etablissements / Récapitulatif)
 // Inchangé côté API — les données sont gérées dans chaque onglet
-// ════════════════════════════════════════════════════════════════════════
+
 const ONGLETS = [
     { key: "etablissements", label: "Etablissements" },
     { key: "recapitulatif",  label: "Recapitulatif"  },

@@ -26,7 +26,7 @@ import mockData from "./data/mockData.json";
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function App() {
-    const [page,        setPage]        = useState("dashboard");
+    const [page, setPage]   = useState("dashboard");
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
     // Nombre de notifications non lues → badge dans le header
@@ -38,6 +38,7 @@ export default function App() {
             minHeight: "100vh",
             fontFamily: "'Segoe UI', Arial, sans-serif",
             background: C.bg,
+
         }}>
 
             {/* ── Sidebar (masquée quand sidebarOpen = false) ── */}

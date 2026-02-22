@@ -66,15 +66,10 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
     const onDeclaration = page === "declaration" || page === "step2";
 
     return (
-        <nav style={{ width: 260, minHeight: "100vh", background: C.white, display: "flex", flexDirection: "column", flexShrink: 0, boxShadow: "2px 0 6px rgba(0,0,0,0.08)", overflowY: "auto", position: "sticky", top: 0, maxHeight: "100vh" }}>
+        <nav style={{ width: 270, minHeight: "100vh", background: C.white, display: "flex", flexDirection: "column", flexShrink: 0, boxShadow: "2px 0 6px rgba(0,0,0,0.08)", overflowY: "auto", position: "sticky", top: 0, maxHeight: "100vh", padding: "5px" }}>
 
             {/* ── Bloc profil orange ── */}
-            <div style={{ background: C.orange, padding: "16px 16px 20px" }}>
-                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-                    <button onClick={() => setSidebarOpen(false)} style={{ background: "none", border: "none", color: C.white, cursor: "pointer", padding: 0 }}>
-                        <CloseIcon />
-                    </button>
-                </div>
+            <div style={{ background: C.orange, padding: "16px 16px 20px", marginBottom: 6, borderRadius: 10 }}>
 
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
                     {/* Avatar */}
@@ -100,7 +95,7 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
                         </div>
                     </div>
 
-                    <button style={{ border: `2px solid ${C.white}`, color: C.white, background: "transparent", borderRadius: 6, padding: "7px 0", fontSize: 12, fontWeight: 700, letterSpacing: 1, cursor: "pointer", width: "90%", textAlign: "center" }}>
+                    <button style={{ border: `2px solid ${C.white}`, color: C.white, background: "transparent", borderRadius: 6, padding: "10px 0", fontSize: 16, fontWeight: 700, letterSpacing: 1, cursor: "pointer", width: "90%", textAlign: "center" }}>
                         CONTRIBUABLE
                     </button>
 

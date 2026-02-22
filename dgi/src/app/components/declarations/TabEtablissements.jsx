@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import C from "../../lib/utils/colors";
 import { InfoIcon } from "../../components/ui/Icons";
-
-
+import Spinner from "../../components/ui/Spinner";
 
 // ─── Composant principal ───────────────────────────────────────────────────
 // ─── Colonnes du tableau ───────────────────────────────────────────────────
