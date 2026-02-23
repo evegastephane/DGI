@@ -17,9 +17,9 @@ import {
 //   setPage       → changer de page
 //   setSidebarOpen→ fermer la sidebar
 export default function Sidebar({ page, setPage, setSidebarOpen }) {
-    const [irppOpen,        setIrppOpen]        = useState(true);
+    const [irppOpen,        setIrppOpen]        = useState(false);
     const [notifOpen,       setNotifOpen]        = useState(false);
-    const [profileExpanded, setProfileExpanded]  = useState(true);
+    const [profileExpanded, setProfileExpanded]  = useState(false);
 
     // ── Données contribuable depuis l'API ──────────────────────────────────
     const [profil, setProfil] = useState(null);
@@ -68,7 +68,7 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
     const onDeclaration = page === "declaration" || page === "step2";
 
     return (
-        <nav style={{ width: 270, minHeight: "100vh", background: C.white, display: "flex", flexDirection: "column", flexShrink: 0, boxShadow: "2px 0 6px rgba(0,0,0,0.08)", overflowY: "auto", position: "sticky", top: 0, maxHeight: "100vh", padding: "5px" }}>
+        <nav style={{ width: 254, minHeight: "100vh", background: C.white, display: "flex", flexDirection: "column", flexShrink: 0, boxShadow: "2px 0 6px rgba(0,0,0,0.08)", overflowY: "auto", position: "sticky", top: 0, maxHeight: "100vh", padding: "5px" }}>
 
             {/* ── Bloc profil orange ── */}
             <div style={{ background: C.orange, padding: "16px 16px 20px", marginBottom: 6, borderRadius: 10 }}>
@@ -140,15 +140,15 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
                 <button style={navBtn(page === "avis")} onClick={() => setPage("avis")}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><ReceiptIcon /> Liste des Avis</span></button>
                 <button style={navBtn(page === "AMR")} onClick={()=> setPage("AMR")}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><ListIcon /> Liste des AMRs</span></button>
 
-                <button style={navBtn(false)} onClick={() => setNotifOpen(!notifOpen)}>
+                <button style={navBtn(page === "notifications")} onClick={() => setNotifOpen(!notifOpen)}>
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><BellIcon /> Notifications</span>
                     {notifOpen ? <ChevUp /> : <ChevDown />}
                 </button>
                 {notifOpen && (<>
-                    <button style={subBtn(false)}>Consulter vos notifications</button>
+                    <button style={subBtn(page === "notifications")} onClick={()=> setPage("notifications")}>Consulter vos notifications</button>
                 </>)}
 
-                <button style={navBtn(false)}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><GearIcon /> Mon profil</span></button>
+                <button style={navBtn(page ==="Profile")} onClick={()=> setPage("Profile")}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><GearIcon /> Mon profil</span></button>
                 <button style={navBtn(false)}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><DocIcon /> Documents Fiscaux</span></button>
                 <button style={navBtn(false)}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><ExitIcon /> Déconnexion</span></button>
             </div>
