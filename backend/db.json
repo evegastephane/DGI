@@ -55,6 +55,7 @@
       "localisation": "Quartier Mvog-Ada", "montant_marge_administree": 5000000.0,
       "CA_boissons_non_alcoolisees": 1200000.0, "CA_boissons_alcoolisees": 800000.0,
       "CA_jeux_de_hasard_et_divertissement": 0.0, "CA_armes_et_munitions": 0.0,
+      "CA_autres_activites" : 20000,
       "id_contribuable": 1, "id_commune": 1
     },
     {
@@ -63,10 +64,29 @@
       "localisation": "Marché Central, Stand B12", "montant_marge_administree": 2500000.0,
       "CA_boissons_non_alcoolisees": 600000.0, "CA_boissons_alcoolisees": 200000.0,
       "CA_jeux_de_hasard_et_divertissement": 0.0, "CA_armes_et_munitions": 0.0,
+      "CA_autres_activites" : 20000,
       "id_contribuable": 1, "id_commune": 1
     },
     {
-      "id_etablissement": 3, "nom_etablissement": "Mballa Industries",
+      "id_etablissement": 3, "nom_etablissement": "Dupont Commerce Principal",
+      "type_activites": "Commerce général", "commune": "Yaoundé I",
+      "localisation": "Quartier Mvog-Ada", "montant_marge_administree": 5000000.0,
+      "CA_boissons_non_alcoolisees": 1200000.0, "CA_boissons_alcoolisees": 800000.0,
+      "CA_jeux_de_hasard_et_divertissement": 0.0, "CA_armes_et_munitions": 56884819,
+      "CA_autres_activites" : 20000,
+      "id_contribuable": 1, "id_commune": 1
+    },
+    {
+      "id_etablissement":4 , "nom_etablissement": "Dupont Annexe Sud",
+      "type_activites": "Commerce général", "commune": "Yaoundé I",
+      "localisation": "Marché Central, Stand B12", "montant_marge_administree": 2500000.0,
+      "CA_boissons_non_alcoolisees": 600000.0, "CA_boissons_alcoolisees": 200000.0,
+      "CA_jeux_de_hasard_et_divertissement": 52555, "CA_armes_et_munitions": 22222,
+      "CA_autres_activites" : 20000,
+      "id_contribuable": 1, "id_commune": 1
+    },
+    {
+      "id_etablissement": 5, "nom_etablissement": "Mballa Industries",
       "type_activites": "Industrie agro-alimentaire", "commune": "Douala III",
       "localisation": "Zone Industrielle de Bassa", "montant_marge_administree": 15000000.0,
       "CA_boissons_non_alcoolisees": 4000000.0, "CA_boissons_alcoolisees": 2500000.0,
@@ -74,7 +94,7 @@
       "id_contribuable": 2, "id_commune": 2
     },
     {
-      "id_etablissement": 4, "nom_etablissement": "Nguema Boutique",
+      "id_etablissement": 6, "nom_etablissement": "Nguema Boutique",
       "type_activites": "Vente au détail", "commune": "Bafoussam I",
       "localisation": "Marché A", "montant_marge_administree": 1500000.0,
       "CA_boissons_non_alcoolisees": 300000.0, "CA_boissons_alcoolisees": 100000.0,

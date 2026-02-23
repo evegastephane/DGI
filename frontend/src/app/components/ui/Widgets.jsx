@@ -86,6 +86,73 @@ export function RecapCell({ value, onChange, readOnly = false }) {
     );
 }
 
+// ─── Spinner DGI — logo centré, points qui tournent autour ────────────────
+export function Spinner() {
+    const N = 8;          // nombre de points
+    const R = 32;         // rayon de l'orbite
+    const cx = 56, cy = 56;
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 0", gap: 16 }}>
+            <svg width="112" height="112" viewBox="0 0 112 112">
+                <style>{`
+          @keyframes dgi-orbit {
+            0%   { opacity: 1;    transform: scale(1.2); }
+            100% { opacity: 0.15; transform: scale(0.7); }
+          }
+          ${Array.from({ length: N }, (_, i) => `
+            .dgi-dot-${i} {
+              animation: dgi-orbit 0.9s linear ${(-i / N).toFixed(2)}s infinite;
+              transform-origin: ${cx}px ${cy}px;
+            }
+          `).join("")}
+        `}</style>
+
+                {/* Points en orbite */}
+                {Array.from({ length: N }, (_, i) => {
+                    const angle = (i / N) * 2 * Math.PI - Math.PI / 2;
+                    const x = cx + R * Math.cos(angle);
+                    const y = cy + R * Math.sin(angle);
+                    return (
+                        <circle
+                            key={i}
+                            className={`dgi-dot-${i}`}
+                            cx={x} cy={y} r={5}
+                            fill="#F59E0B"
+                        />
+                    );
+                })}
+
+                {/* Logo DGI centré — cercle orange + texte blanc */}
+                <circle cx={cx} cy={cy} r={18} fill="#F59E0B" />
+                <text
+                    x={cx} y={cy - 4}
+                    textAnchor="middle" dominantBaseline="middle"
+                    fontSize="9" fontWeight="900" fill="white"
+                    fontFamily="Arial, sans-serif" letterSpacing="1"
+                >DGI</text>
+                <text
+                    x={cx} y={cy + 7}
+                    textAnchor="middle" dominantBaseline="middle"
+                    fontSize="5.5" fontWeight="600" fill="white"
+                    fontFamily="Arial, sans-serif" letterSpacing="0.5"
+                >IMPÔTS</text>
+            </svg>
+            <span style={{ fontSize: 13, color: "#9ca3af" }}>Chargement...</span>
+        </div>
+    );
+}
+
+// ─── Message d'erreur ──────────────────────────────────────────────────────
+export function ErrorMsg({ message }) {
+    return (
+        <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 8, padding: "14px 18px", color: "#b91c1c", fontSize: 13, display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 18 }}>⚠</span>
+            <span>{message || "Une erreur est survenue. Vérifiez que le backend est démarré sur le port 3001."}</span>
+        </div>
+    );
+}
+
 // ═══════════════════════════════════════════
 // DonutChart.jsx
 // Graphique SVG pur — Avis Payés / Non Payés

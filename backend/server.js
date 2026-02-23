@@ -444,6 +444,103 @@ app.get('/api/avis-imposition/:id', (req, res) => {
     success(res, { ...a, declaration, contribuable });
 });
 
+// ─── 1. Recherche avancée avis avec filtre exercice ────────────────────────
+// Remplace GET /api/avis-imposition existant — ajoute le filtre "exercice"
+// (La route existante filtrait uniquement par id_contribuable et statut)
+
+app.get('/api/avis-imposition', (req, res) => {
+    let results = [...db.avis_imposition];
+
+    if (req.query.id_contribuable)
+        results = results.filter(a => a.id_contribuable === parseInt(req.query.id_contribuable));
+
+    if (req.query.statut)
+        results = results.filter(a => a.statut === req.query.statut.toUpperCase());
+
+    // NOUVEAU : filtre par exercice (annee_fiscale de la déclaration liée)
+    if (req.query.exercice) {
+        const annee = parseInt(req.query.exercice);
+        results = results.filter(a => {
+            const decl = db.declarations.find(d => d.id_declaration === a.id_declaration);
+            return decl && decl.annee_fiscale === annee;
+        });
+    }
+
+    // Enrichir chaque avis avec sa déclaration liée (pour avoir annee_fiscale, montant, etc.)
+    const enriched = results.map(a => {
+        const declaration  = db.declarations.find(d => d.id_declaration  === a.id_declaration);
+        const contribuable = db.contribuables.find(c => c.id_contribuable === a.id_contribuable);
+        return { ...a, declaration, contribuable };
+    });
+
+    success(res, enriched);
+});
+
+
+// ─── 2. Détail complet d'un avis (déjà existante — vérifier qu'elle enrichit bien) ──
+// Si la route GET /api/avis-imposition/:id n'enrichit pas avec contribuable + declaration,
+// remplacer par celle-ci :
+
+app.get('/api/avis-imposition/:id', (req, res) => {
+    const a = db.avis_imposition.find(a => a.id_avis === parseInt(req.params.id));
+    if (!a) return error(res, "Avis d'imposition introuvable", 404);
+
+    const declaration  = db.declarations.find(d  => d.id_declaration  === a.id_declaration);
+    const contribuable = db.contribuables.find(c  => c.id_contribuable === a.id_contribuable);
+    const paiements    = db.paiements.filter(p    => p.id_declaration  === a.id_declaration);
+
+    success(res, { ...a, declaration, contribuable, paiements });
+});
+
+
+// ─── 3. Création automatique d'un avis lors de la validation d'une déclaration ──
+// CETTE LOGIQUE EXISTE DÉJÀ dans PATCH /api/declarations/:id/statut
+// Elle crée un avis quand statut passe à "VALIDEE".
+// S'assurer que le champ "reference" est bien généré (AV-GNR-XXXX).
+// Vérifier dans le bloc existant qu'il contient bien :
+
+/*
+  if (statut === "VALIDEE" && ancienStatut !== "VALIDEE") {
+    const idAvis = nextId('avis');
+    db.avis_imposition.push({
+      id_avis:           idAvis,
+      reference:         `AV-GNR-${Date.now()}`,          // ← référence unique
+      RIB_receveur:      "CM21 00000 00000 000000000000 00",
+      date_reception:    new Date().toISOString().split('T')[0],
+      date_notification: new Date().toISOString().split('T')[0],
+      montant:           db.declarations[idx].montant_a_payer || 0,
+      statut:            "NON_PAYE",
+      id_contribuable,
+      id_declaration:    parseInt(req.params.id),
+    });
+  }
+*/
+// Si ce bloc manque ou est incomplet, l'ajouter / corriger dans le PATCH existant.
+
+
+// ─── 4. Marquer un avis comme payé (utile pour la future page paiements) ──
+
+app.patch('/api/avis-imposition/:id/payer', (req, res) => {
+    const idx = db.avis_imposition.findIndex(a => a.id_avis === parseInt(req.params.id));
+    if (idx === -1) return error(res, "Avis introuvable", 404);
+    if (db.avis_imposition[idx].statut === "PAYE")
+        return error(res, "Cet avis est déjà payé");
+
+    db.avis_imposition[idx].statut      = "PAYE";
+    db.avis_imposition[idx].date_paiement = new Date().toISOString().split('T')[0];
+
+    // Notification au contribuable
+    db.notifications.push({
+        id_notification: nextId('notification'),
+        titre:    "Avis payé",
+        statut:   "NON_LU",
+        contenu:  `Votre avis ${db.avis_imposition[idx].reference} a été marqué comme payé.`,
+        id_contribuable: db.avis_imposition[idx].id_contribuable,
+        date_creation:   new Date().toISOString().split('T')[0],
+    });
+
+    success(res, db.avis_imposition[idx]);
+});
 // ══════════════════════════════════════════════════════════════════════════════
 // AMR
 // ══════════════════════════════════════════════════════════════════════════════

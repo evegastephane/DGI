@@ -49,6 +49,7 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
     const navBtn = (isActive) => ({
         display: "flex", alignItems: "center", justifyContent: "space-between",
         width: "100%", padding: "12px 20px", border: "none", cursor: "pointer",
+        borderRadius: "8px",
         textAlign: "left", fontSize: 14,
         background: isActive ? C.orange : "transparent",
         color:      isActive ? C.white  : C.textMid,
@@ -58,6 +59,7 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
     const subBtn = (isActive) => ({
         display: "block", width: "100%", padding: "10px 20px 10px 52px",
         border: "none", cursor: "pointer", textAlign: "left", fontSize: 14,
+        borderRadius: "8px",
         background: isActive ? C.orange : "transparent",
         color:      isActive ? C.white  : C.textMid,
         fontWeight: isActive ? 600 : 400,
@@ -116,8 +118,8 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
             </div>
 
             {/* ── Navigation ── */}
-            <div style={{ flex: 1 }}>
-                <button style={ }>
+            <div style={{ display: "flex", flexDirection: "column", gap : 2}}>
+                <button style={navBtn(page === {})} onClick={() => setPage(!irppOpen)}>
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><HomeIcon /> Accueil</span>
                 </button>
                 <button style={navBtn(page === "dashboard")} onClick={() => setPage("dashboard")}>
@@ -125,7 +127,7 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
                 </button>
 
                 <button style={navBtn(onDeclaration)} onClick={() => setIrppOpen(!irppOpen)}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 10 }}><TaskIcon /> Déclaration IRPP</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 10 }}><TaskIcon /> Déclaration Patente</span>
                     {irppOpen ? <ChevUp /> : <ChevDown />}
                 </button>
                 {irppOpen && (<>
@@ -135,7 +137,7 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
                 </>)}
 
                 <button style={navBtn(false)}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><CardIcon /> Liste des Paiements</span></button>
-                <button style={navBtn(false)}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><ReceiptIcon /> Liste des Avis</span></button>
+                <button style={navBtn(page === "avis")} onClick={() => setPage("avis")}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><ReceiptIcon /> Liste des Avis</span></button>
                 <button style={navBtn(false)}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><ListIcon /> Liste des AMRs</span></button>
 
                 <button style={navBtn(false)} onClick={() => setNotifOpen(!notifOpen)}>

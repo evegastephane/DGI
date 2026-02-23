@@ -10,10 +10,12 @@ import Footer  from "../app/components/layout/Footer";
 
 // ── Pages ─────────────────────────────────────────────────────────────────
 import PageDashboard          from "../app/dashboard/page";
+import PageListeDesAvis from "../app/avis/page";
 import { PageStep1, PageStep2 } from "../app/declaration/page";
 
 // ── Données ───────────────────────────────────────────────────────────────
 import mockData from "./data/mockData.json";
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // page.js — Point d'entrée principal
@@ -63,6 +65,7 @@ export default function App() {
                 {page === "dashboard"   && <PageDashboard setPage={setPage} />}
                 {page === "declaration" && <PageStep1 setPage={setPage} />}
                 {page === "step2"       && <PageStep2 setPage={setPage} />}
+                {page === "avis" && <PageListeDesAvis setPage={setPage} />}
 
                 <Footer />
             </div>
