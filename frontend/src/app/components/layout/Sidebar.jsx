@@ -136,17 +136,16 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
                     <button style={subBtn(false)}>Authentifier un document</button>
                 </>)}
 
-                <button style={navBtn(false)}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><CardIcon /> Liste des Paiements</span></button>
+                <button style={navBtn(page === "Paiements")} onClick={() => setPage("Paiements")}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><CardIcon /> Liste des Paiements</span></button>
                 <button style={navBtn(page === "avis")} onClick={() => setPage("avis")}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><ReceiptIcon /> Liste des Avis</span></button>
-                <button style={navBtn(false)}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><ListIcon /> Liste des AMRs</span></button>
+                <button style={navBtn(page === "AMR")} onClick={()=> setPage("AMR")}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><ListIcon /> Liste des AMRs</span></button>
 
                 <button style={navBtn(false)} onClick={() => setNotifOpen(!notifOpen)}>
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><BellIcon /> Notifications</span>
                     {notifOpen ? <ChevUp /> : <ChevDown />}
                 </button>
                 {notifOpen && (<>
-                    <button style={subBtn(false)}>Toutes</button>
-                    <button style={subBtn(false)}>Non Lues</button>
+                    <button style={subBtn(false)}>Consulter vos notifications</button>
                 </>)}
 
                 <button style={navBtn(false)}><span style={{ display: "flex", alignItems: "center", gap: 10 }}><GearIcon /> Mon profil</span></button>

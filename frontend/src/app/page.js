@@ -12,9 +12,12 @@ import Footer  from "../app/components/layout/Footer";
 import PageDashboard          from "../app/dashboard/page";
 import PageListeDesAvis from "../app/avis/page";
 import { PageStep1, PageStep2 } from "../app/declaration/page";
+import ListePaiementsPage from "./Paiements/page";
+import PageListeDesAMRs from "./AMR/page";
 
 // ── Données ───────────────────────────────────────────────────────────────
 import mockData from "./data/mockData.json";
+
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -66,6 +69,8 @@ export default function App() {
                 {page === "declaration" && <PageStep1 setPage={setPage} />}
                 {page === "step2"       && <PageStep2 setPage={setPage} />}
                 {page === "avis" && <PageListeDesAvis setPage={setPage} />}
+                {page === "Paiements" && <ListePaiementsPage setPage={setPage} />}
+                {page === "AMR" && <PageListeDesAMRs setPage={setPage} />}
 
                 <Footer />
             </div>
