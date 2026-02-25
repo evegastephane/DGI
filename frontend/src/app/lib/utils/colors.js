@@ -1,6 +1,6 @@
 // ─── Palette centrale — modifier ici pour tout changer ────────────────────
 const C = {
-    orange:     "#F59E0B",
+    orange:     "#F29400",
     orangeHov:  "#D97706",
     orangeBg:   "#FEF3C7",
     orangeText: "#AD6F0D",

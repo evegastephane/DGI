@@ -20,6 +20,7 @@ export default function Header({ sidebarOpen, setSidebarOpen, notifCount = 0 }) 
             alignItems: "center",
             justifyContent: "space-between",
             position: "sticky",
+            marginLeft: 18,
             top: 0,
             zIndex: 100,
         }}>
