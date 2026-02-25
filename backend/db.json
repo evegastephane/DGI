@@ -136,27 +136,60 @@
 
   "paiements": [
     {
-      "id_paiement": 1, "reference_paiement": "PAY-2024-00001", "date_paiement": "2024-01-20",
-      "montant_paye": 350000.0, "mode_paiement": "VIREMENT_BANCAIRE", "statut": "EFFECTUE",
-      "details_paiement": "Paiement intégral patente 2024", "id_declaration": 1
+      "id": 1,
+      "anneeFiscale": 2025,
+      "structureFiscale": "DGE",
+      "referenceDeclaration": "DECL-2025-00001",
+      "referencePaiement": "PAY-2025-00001",
+      "statutPaiement": "paye",
+      "montantAPayer": 1500000,
+      "montantPaye": 1500000,
+      "payeLe": "2025-02-10T00:00:00.000Z"
     },
     {
-      "id_paiement": 2, "reference_paiement": "PAY-2024-00002", "date_paiement": "2024-04-10",
-      "montant_paye": 250000.0, "mode_paiement": "MOBILE_MONEY", "statut": "EFFECTUE",
-      "details_paiement": "Acompte 50% licence 2024", "id_declaration": 2
+      "id": 2,
+      "anneeFiscale": 2025,
+      "structureFiscale": "DMC",
+      "referenceDeclaration": "DECL-2025-00002",
+      "referencePaiement": null,
+      "statutPaiement": "en_attente",
+      "montantAPayer": 800000,
+      "montantPaye": 0,
+      "payeLe": null
     },
     {
-      "id_paiement": 3, "reference_paiement": "PAY-2024-00003", "date_paiement": "2024-05-15",
-      "montant_paye": 90000.0, "mode_paiement": "ESPECES", "statut": "EN_ATTENTE",
-      "details_paiement": "Paiement partiel IGS", "id_declaration": 3
+      "id": 3,
+      "anneeFiscale": 2024,
+      "structureFiscale": "DGE",
+      "referenceDeclaration": "DECL-2024-00045",
+      "referencePaiement": "PAY-2024-00045",
+      "statutPaiement": "partiel",
+      "montantAPayer": 2000000,
+      "montantPaye": 1000000,
+      "payeLe": "2024-11-05T00:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "anneeFiscale": 2024,
+      "structureFiscale": "DSF",
+      "referenceDeclaration": "DECL-2024-00089",
+      "referencePaiement": "PAY-2024-00089",
+      "statutPaiement": "rejete",
+      "montantAPayer": 500000,
+      "montantPaye": 0,
+      "payeLe": null
+    },
+    {
+      "id": 5,
+      "anneeFiscale": 2023,
+      "structureFiscale": "DMC",
+      "referenceDeclaration": "DECL-2023-00120",
+      "referencePaiement": "PAY-2023-00120",
+      "statutPaiement": "paye",
+      "montantAPayer": 3200000,
+      "montantPaye": 3200000,
+      "payeLe": "2023-06-20T00:00:00.000Z"
     }
-  ],
-
-  "beneficiaires": [
-    { "id_beneficiaire": 1, "nom_beneficiaire": "Commune de Yaoundé I", "pourcentage_ventilation": 60.0, "montant_ventile": 210000.0, "id_paiement": 1 },
-    { "id_beneficiaire": 2, "nom_beneficiaire": "Trésor Public",         "pourcentage_ventilation": 40.0, "montant_ventile": 140000.0, "id_paiement": 1 },
-    { "id_beneficiaire": 3, "nom_beneficiaire": "Commune de Yaoundé I", "pourcentage_ventilation": 60.0, "montant_ventile": 150000.0, "id_paiement": 2 },
-    { "id_beneficiaire": 4, "nom_beneficiaire": "Trésor Public",         "pourcentage_ventilation": 40.0, "montant_ventile": 100000.0, "id_paiement": 2 }
   ],
 
   "AMR": [
