@@ -53,7 +53,7 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
         textAlign: "left", fontSize: 14,
         background: isActive ? C.orange : "transparent",
         color:      isActive ? C.white  : C.textMid,
-        fontWeight: isActive ? 600 : 400,
+        fontWeight: 450,
     });
 
     const subBtn = (isActive) => ({
@@ -68,7 +68,7 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
     const onDeclaration = page === "declaration" || page === "step2";
 
     return (
-        <nav style={{ width: 254, minHeight: "100vh", background: C.white, display: "flex", flexDirection: "column", flexShrink: 0, boxShadow: "2px 0 6px rgba(0,0,0,0.08)", overflowY: "auto", position: "sticky", top: 0, maxHeight: "100vh", padding: "5px" }}>
+        <nav style={{ width: 251, minHeight: "100vh", background: C.white, display: "flex", flexDirection: "column", flexShrink: 0, boxShadow: "2px 0 6px rgba(0,0,0,0.08)", overflowY: "auto", position: "sticky", top: 0, maxHeight: "100vh", padding: "5px" }}>
 
             {/* ── Bloc profil orange ── */}
             <div style={{ background: C.orange, padding: "16px 16px 20px", marginBottom: 6, borderRadius: 10 }}>

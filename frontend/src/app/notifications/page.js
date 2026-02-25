@@ -148,7 +148,7 @@ export default function PageNotifications() {
 
     return (
         <main style={{ flex: 1, background: "#F3F4F6", display: "flex", flexDirection: "column" }}>
-            <div style={{ padding: "28px" }}>
+            <div style={{ padding: "28px", width: "87%" }}>
                 <div style={{
                     background: C.white, borderRadius: 10,
                     padding: "28px 32px",

@@ -10,6 +10,8 @@ export default function Footer() {
             color: C.textMid,
             borderTop: `1px solid ${C.border}`,
             background: C.white,
+            width:"96%",
+            marginLeft: "18px",
         }}>
             Copyright © <strong>Direction Générale des Impôts</strong> 2026
         </footer>

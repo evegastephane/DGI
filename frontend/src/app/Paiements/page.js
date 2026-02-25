@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import C from "../lib/utils/colors";
-import mockData from "../data/mockData.json";
+import { getPaiements } from "../lib/api/PaiementsApi";
+import { ChevDown, ChevUp } from "../components/ui/Icons";
 
 // ─── Options filtres ──────────────────────────────────────────────────────
 const STATUT_OPTIONS = [
@@ -215,11 +216,14 @@ export default function PageListeDesPaiements() {
     const [hiddenCols,       setHiddenCols]       = useState([]);
     const [openMenu,         setOpenMenu]         = useState(null);
     const [manageOpen,       setManageOpen]       = useState(false);
-    const [paiementsFiltres, setPaiementsFiltres] = useState(mockData.paiementsListe ?? []);
+    const [paiementsFiltres, setPaiementsFiltres] = useState([]);
+    const [totalPaiements,   setTotalPaiements]   = useState(0);
+    const [loading,          setLoading]          = useState(true);
 
     const exerciceRef = useRef(null);
     const statutRef   = useRef(null);
 
+    // ── Fermer les dropdowns au clic extérieur ──
     useEffect(() => {
         const h = (e) => {
             if (exerciceRef.current && !exerciceRef.current.contains(e.target)) setExerciceOpen(false);
@@ -229,6 +233,18 @@ export default function PageListeDesPaiements() {
         return () => document.removeEventListener("mousedown", h);
     }, []);
 
+    // ── Chargement initial depuis l'API ──
+    useEffect(() => {
+        setLoading(true);
+        getPaiements()
+            .then((data) => {
+                setPaiementsFiltres(data);
+                setTotalPaiements(data.length);
+            })
+            .catch(console.error)
+            .finally(() => setLoading(false));
+    }, []);
+
     const toggleStatut  = (val) => setStatutsSelec((p) => p.includes(val) ? p.filter((s) => s !== val) : [...p, val]);
     const toggleTout    = () => setStatutsSelec([]);
     const statutAffiche = statutsSelec.length > 0 ? statutsSelec.join(", ") : "";
@@ -236,19 +252,36 @@ export default function PageListeDesPaiements() {
     const handleHide    = (key) => setHiddenCols((p) => [...p, key]);
     const toggleCol     = (key) => setHiddenCols((p) => p.includes(key) ? p.filter((k) => k !== key) : [...p, key]);
 
-    const handleRechercher = () => {
-        let result = [...(mockData.paiementsListe ?? [])];
-        if (exerciceSaisi.trim()) {
-            const annee = parseInt(exerciceSaisi.replace(/\D/g, ""));
-            if (!isNaN(annee)) result = result.filter((p) => p.anneeFiscale === annee);
-        }
-        if (statutsSelec.length > 0) {
-            result = result.filter((p) => {
-                const mapped = STATUT_MAP[p.statutPaiement] ?? p.statutPaiement?.toUpperCase();
-                return statutsSelec.includes(mapped);
+    // ── Recherche avec filtres ──
+    const handleRechercher = async () => {
+        try {
+            setLoading(true);
+            const result = await getPaiements({
+                anneeFiscale: exerciceSaisi ? parseInt(exerciceSaisi) : undefined,
+                statuts:      statutsSelec,
+                sortKey:      sortKey ?? undefined,
+                sortDir:      sortDir,
             });
+            setPaiementsFiltres(result);
+        } catch (err) {
+            console.error("Erreur lors de la recherche :", err);
+        } finally {
+            setLoading(false);
         }
-        setPaiementsFiltres(result);
+    };
+
+    // ── Reset filtre exercice ──
+    const handleClearExercice = async () => {
+        setExerciceSaisi("");
+        try {
+            setLoading(true);
+            const result = await getPaiements({ statuts: statutsSelec });
+            setPaiementsFiltres(result);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const sorted = [...paiementsFiltres].sort((a, b) => {
@@ -274,20 +307,20 @@ export default function PageListeDesPaiements() {
         <main style={{ flex: 1, background: "#F3F4F6", display: "flex", flexDirection: "column" }}>
 
             {/* ── Titre ── */}
-            <div style={{ background: C.white, marginTop:"20px", marginLeft: "10px", width:"97%",padding: "20px 16px  ", borderBottom: `1px solid #E5E7EB`, borderRadius:'10px', height: "65px"}}>
-                <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: C.textDark }}>Liste des Paiements</h1>
+            <div style={{ background: C.white, marginTop:"20px", marginLeft: "18px", width:"96%", padding: "20px 16px", borderBottom: `1px solid #E5E7EB`, borderRadius:'5px', height: "60px" }}>
+                <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, color: C.textDark, padding: "0px 0px" }}>Liste des Paiements</h1>
             </div>
 
             <div style={{ padding: "25px 0 40px" }}>
 
                 {/* ── Recherche avancée ── */}
-                <div style={{ background: C.white, boxShadow: '4px 4px 4px 4px black bottom', width:"97%", marginLeft: "10px"  }}>
+                <div style={{ background: C.white, width:"96%", marginLeft: "18px" }}>
                     <div
                         onClick={() => setRechercheOuverte(!rechercheOuverte)}
                         style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 28px", cursor: "pointer", userSelect: "none" }}
                     >
-                        <span style={{ fontWeight: 600, fontSize: 16, color: C.textDark, alignItems: 'left',marginLeft: "-15px" }}>Recherche avancée</span>
-                        <span style={{ fontSize: 18, color: C.textGrey }}>{rechercheOuverte ? "∧" : "∨"}</span>
+                        <span style={{ fontWeight: 600, fontSize: 16, color: C.textDark, marginLeft: "-15px" }}>Recherche avancée</span>
+                        <span style={{ fontSize: 18, color: C.textGrey }}>{rechercheOuverte ? <ChevUp /> : <ChevDown />}</span>
                     </div>
 
                     {rechercheOuverte && (
@@ -295,29 +328,21 @@ export default function PageListeDesPaiements() {
 
                             {/* Exercice */}
                             <div ref={exerciceRef} style={{ flex: 1, minWidth: 200, position: "relative" }}>
-                                <OutlinedInput
-                                    label="Exercice"
-                                    value={exerciceSaisi ? `EXERCICE ${exerciceSaisi}` : ""}
-                                    onClear={() => { setExerciceSaisi(""); setPaiementsFiltres(mockData.paiementsListe ?? []); }}
-                                    onClick={() => setExerciceOpen(!exerciceOpen)}
-                                    open={exerciceOpen}
-                                >
+                                    <OutlinedInput
+                                        label="Exercice"
+                                        value={exerciceSaisi ? `EXERCICE ${exerciceSaisi}` : ""}
+                                        onClear={handleClearExercice}
+                                        onClick={() => setExerciceOpen(!exerciceOpen)}
+                                        open={exerciceOpen}
+                                    >
+
                                     {exerciceOpen && (
                                         <div style={{
                                             position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 100,
                                             background: C.white, border: `1px solid ${C.border}`,
                                             borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", overflow: "hidden",
                                         }}>
-                                            <div style={{ padding: "8px 12px", borderBottom: `1px solid ${C.border}` }}>
-                                                <input
-                                                    type="number" placeholder="Saisir une année..."
-                                                    value={exerciceSaisi}
-                                                    onChange={(e) => setExerciceSaisi(e.target.value)}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    style={{ width: "100%", border: `1px solid ${C.border}`, borderRadius: 4, padding: "6px 10px", fontSize: 13, outline: "none" }}
-                                                    autoFocus
-                                                />
-                                            </div>
+
                                             {EXERCICE_OPTIONS.map((ex) => (
                                                 <div
                                                     key={ex}
@@ -410,29 +435,29 @@ export default function PageListeDesPaiements() {
 
                 {/* ── Compteur rows ── */}
                 <div style={{ background: "#F3F4F6", padding: "10px 28px", textAlign: "right", fontSize: 13, color: C.textGrey }}>
-                    showing {sorted.length} of {(mockData.paiementsListe ?? []).length} rows
+                    {loading ? "Chargement..." : `showing ${sorted.length} of ${totalPaiements} rows`}
                 </div>
 
                 {/* ── Tableau ── */}
-                <div style={{ background: C.white, overflowX: "auto", width:"97%", marginLeft: "10px", border:'1px solid lightGray'}}>
+                <div style={{ background: C.white, overflowX: "auto", width:"96%", marginLeft: "18px", border:'1px solid lightGray' }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
                         <thead>
                         <tr>
                             {visibleColumns.map((col) => (
                                 <th key={col.key} style={thStyle}>
                                     <div
-                                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", gap: 6 }}
+                                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", gap: 6, fontSize: 11 }}
                                         onMouseEnter={(e) => { const btn = e.currentTarget.querySelector(".col-menu-btn"); if (btn) btn.style.opacity = "1"; }}
                                         onMouseLeave={(e) => { const btn = e.currentTarget.querySelector(".col-menu-btn"); if (btn && openMenu !== col.key) btn.style.opacity = "0"; }}
                                     >
-                                            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                                {col.label}
-                                                {sortKey === col.key && (
-                                                    <span style={{ color: C.orange }}>
-                                                        {sortDir === "asc" ? <IcoUp /> : <IcoDown />}
-                                                    </span>
-                                                )}
-                                            </span>
+                                        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                            {col.label}
+                                            {sortKey === col.key && (
+                                                <span style={{ color: C.orange }}>
+                                                    {sortDir === "asc" ? <IcoUp /> : <IcoDown />}
+                                                </span>
+                                            )}
+                                        </span>
                                         <button
                                             className="col-menu-btn"
                                             onClick={(e) => { e.stopPropagation(); setOpenMenu(openMenu === col.key ? null : col.key); }}
@@ -458,7 +483,13 @@ export default function PageListeDesPaiements() {
                         </tr>
                         </thead>
                         <tbody>
-                        {sorted.length === 0 ? (
+                        {loading ? (
+                            <tr>
+                                <td colSpan={visibleColumns.length} style={{ padding: "60px 20px", textAlign: "center", color: C.textGrey, fontSize: 14 }}>
+                                    Chargement des paiements...
+                                </td>
+                            </tr>
+                        ) : sorted.length === 0 ? (
                             <tr>
                                 <td colSpan={visibleColumns.length} style={{ padding: "60px 20px", textAlign: "center", color: C.textGrey, fontSize: 14 }}>
                                     Aucun paiement ne correspond aux critères sélectionnés.
@@ -508,7 +539,11 @@ function LignePaiement({ paiement, visibleColumns, tdStyle }) {
                     ? new Date(paiement.payeLe).toLocaleDateString("fr-FR")
                     : "—";
             default:
-                return paiement[col.key] ?? "—";
+                const valeur = paiement[col.key];
+                // Si c'est un nombre et que c'est NaN, on affiche un tiret
+                if (typeof valeur === 'number' && isNaN(valeur)) return "—";
+                // Sinon, on affiche la valeur ou un tiret si null/undefined
+                return valeur ?? "—";
         }
     };
 
