@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import C from "../lib/utils/colors";
+import { getContribuable, CURRENT_USER_ID } from "../lib/api/contribuableApi";
 import mockData from "../data/mockData.json";
 
-// ─── Communes du Cameroun (liste simplifiée) ──────────────────────────────
+// ─── Communes du Cameroun ──────────────────────────────────────────────────
 const COMMUNES = [
     "Yaoundé 1", "Yaoundé 2", "Yaoundé 3", "Yaoundé 4", "Yaoundé 5",
     "Yaoundé 6", "Yaoundé 7", "Douala 1", "Douala 2", "Douala 3",
@@ -14,7 +15,14 @@ const COMMUNES = [
     "Bertoua 1", "Bertoua 2", "Ebolowa 1", "Ebolowa 2", "Buea",
 ];
 
-// ─── Composant champ lecture seule (pré-rempli, non modifiable) ───────────
+// ─── Badge rôle/centre ─────────────────────────────────────────────────────
+const ROLE_BADGE = {
+    CGA: { bg: "#EDE9FE", color: "#7C3AED", label: "Adhérant CGA" },
+    DGE: { bg: "#DBEAFE", color: "#1D4ED8", label: "Contribuable DGE" },
+    CIS: { bg: "#D1FAE5", color: "#065F46", label: "Adhérant CIS" },
+};
+
+// ─── Composant champ lecture seule ─────────────────────────────────────────
 function ChampLecture({ label, valeur }) {
     return (
         <div style={{ marginBottom: 28 }}>
@@ -25,13 +33,13 @@ function ChampLecture({ label, valeur }) {
                 fontSize: 15, color: C.textDark, paddingBottom: 10,
                 borderBottom: `1.5px dashed #D1D5DB`,
             }}>
-                {valeur}
+                {valeur || "—"}
             </div>
         </div>
     );
 }
 
-// ─── Composant champ éditable (underline style) ───────────────────────────
+// ─── Composant champ éditable ──────────────────────────────────────────────
 function ChampInput({ label, value, onChange, type = "text", requis = true, placeholder = "" }) {
     const [focus, setFocus] = useState(false);
     return (
@@ -57,7 +65,7 @@ function ChampInput({ label, value, onChange, type = "text", requis = true, plac
     );
 }
 
-// ─── Composant select Commune (underline style) ───────────────────────────
+// ─── Select commune ────────────────────────────────────────────────────────
 function ChampSelect({ label, value, onChange, options, requis = true }) {
     const [focus, setFocus] = useState(false);
     return (
@@ -96,34 +104,123 @@ function ChampSelect({ label, value, onChange, options, requis = true }) {
     );
 }
 
-// ─── Page principale ──────────────────────────────────────────────────────
-export default function PageMonProfil() {
-    const utilisateur = mockData.utilisateur ?? {};
+// ─── Avatar initiales ──────────────────────────────────────────────────────
+function Avatar({ initiales, bg = C.orange }) {
+    return (
+        <div style={{
+            width: 64, height: 64, borderRadius: "50%",
+            background: bg, display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 22, fontWeight: 700, color: "#fff", flexShrink: 0,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+        }}>
+            {initiales}
+        </div>
+    );
+}
 
-    // Champs pré-remplis (lecture seule)
-    const nif             = utilisateur.nif             ?? "P050517806522K";
-    const structureFiscale= utilisateur.structureFiscale ?? "CDI YAOUNDE 1";
-    const nomsComplets    = utilisateur.nomsComplets    ?? utilisateur.nom ?? "Onana Yvan Frédéric";
+// ─── Carte profil (switcher) ───────────────────────────────────────────────
+function ProfilCard({ profil, actif, onClick }) {
+    const centre  = profil.centre;
+    const badge   = centre ? ROLE_BADGE[centre] : null;
+    const couleur = centre === "CGA" ? "#7C3AED" : centre === "DGE" ? "#1D4ED8" : centre === "CIS" ? "#065F46" : C.orange;
+
+    return (
+        <div
+            onClick={onClick}
+            style={{
+                display: "flex", alignItems: "center", gap: 14,
+                padding: "14px 18px", borderRadius: 10, cursor: "pointer",
+                border: actif ? `2px solid ${couleur}` : "2px solid #E5E7EB",
+                background: actif ? (centre === "CGA" ? "#F5F3FF" : centre === "DGE" ? "#EFF6FF" : centre === "CIS" ? "#ECFDF5" : "#FFF7ED") : "#fff",
+                transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => { if (!actif) e.currentTarget.style.borderColor = "#9CA3AF"; }}
+            onMouseLeave={(e) => { if (!actif) e.currentTarget.style.borderColor = "#E5E7EB"; }}
+        >
+            <Avatar initiales={profil.initiales} bg={couleur} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: C.textDark, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {profil.nom}
+                </p>
+                <p style={{ fontSize: 12, color: C.textGrey, margin: "2px 0 0" }}>{profil.nif}</p>
+                {badge && (
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: badge.bg, color: badge.color, display: "inline-block", marginTop: 4 }}>
+                        {badge.label}
+                    </span>
+                )}
+            </div>
+            {actif && (
+                <div style={{ width: 20, height: 20, borderRadius: "50%", background: couleur, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg viewBox="0 0 12 9" width="10" height="9" fill="none">
+                        <path d="M1 4L4.5 7.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Page principale ───────────────────────────────────────────────────────
+export default function PageMonProfil() {
+    const profils      = mockData.profils ?? [];
+    const [profilId, setProfilId]     = useState(mockData.profilActif ?? 1);
+    const [loading, setLoading]       = useState(false);
+    const [apiData, setApiData]       = useState(null);
 
     // Champs éditables
-    const [email,         setEmail]         = useState(utilisateur.email         ?? "");
-    const [emailAdditionnel, setEmailAdditionnel] = useState(utilisateur.emailAdditionnel ?? "");
-    const [telephone,     setTelephone]     = useState(utilisateur.telephone     ?? "237");
-    const [commune,       setCommune]       = useState(utilisateur.commune       ?? "");
+    const [email, setEmail]                     = useState("");
+    const [emailAdditionnel, setEmailAdditionnel] = useState("");
+    const [telephone, setTelephone]             = useState("");
+    const [commune, setCommune]                 = useState("");
+    const [enregistrement, setEnregistrement]   = useState(null);
+    const [chargement, setChargement]           = useState(false);
 
-    const [enregistrement, setEnregistrement] = useState(null); // null | "succes" | "erreur"
-    const [chargement,     setChargement]     = useState(false);
+    // Chargement depuis API ou fallback mock
+    useEffect(() => {
+        const fetchProfil = async () => {
+            setLoading(true);
+            setEnregistrement(null);
+            try {
+                // On essaie l'API avec l'id du profil actif
+                const data = await getContribuable(profilId);
+                setApiData(data);
+                setEmail(data.email !== "—" ? data.email : "");
+                setEmailAdditionnel(data.emailAdditionnel ?? "");
+                setTelephone(data.telephone !== "—" ? data.telephone : "");
+                setCommune(data.commune?.nom_commune !== "—" ? (data.commune?.nom_commune ?? "") : "");
+            } catch {
+                // Fallback sur les données mock
+                const mock = profils.find((p) => p.id === profilId) ?? profils[0];
+                setApiData(null);
+                setEmail(mock?.email ?? "");
+                setEmailAdditionnel(mock?.emailAdditionnel ?? "");
+                setTelephone(mock?.telephone ?? "");
+                setCommune(mock?.commune ?? "");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProfil();
+    }, [profilId]);
+
+    // Profil courant (pour les champs lecture seule)
+    const mockProfil    = profils.find((p) => p.id === profilId) ?? profils[0] ?? {};
+    const nif           = apiData?.NIU           ?? mockProfil.nif            ?? "—";
+    const structureFisc = apiData?.structureFiscale ?? mockProfil.structureFiscale ?? "—";
+    const nomsComplets  = apiData
+        ? [apiData.prenom, apiData.nom_beneficiaire].filter(Boolean).join(" ") || mockProfil.nom
+        : mockProfil.nom ?? "—";
+
+    const centre  = mockProfil.centre;
+    const couleur = centre === "CGA" ? "#7C3AED" : centre === "DGE" ? "#1D4ED8" : centre === "CIS" ? "#065F46" : C.orange;
 
     const handleContinuer = async () => {
-        // Validation basique
         if (!email || !telephone || !commune) {
             setEnregistrement("erreur");
             return;
         }
         setChargement(true);
         setEnregistrement(null);
-
-        // Simuler un appel API (remplacer par fetch réel)
         await new Promise((r) => setTimeout(r, 800));
         setChargement(false);
         setEnregistrement("succes");
@@ -132,90 +229,151 @@ export default function PageMonProfil() {
     return (
         <main style={{ flex: 1, background: "#F3F4F6", display: "flex", flexDirection: "column" }}>
 
-            <div style={{fontSize: 11, alignItems: "center", justifyContent: "center"}}>
-                <h1>Mettre à jour les informations de votre profile</h1>
+            {/* ── Titre ─────────────────────────────────────────────────────── */}
+            <div style={{
+                background: "#fff", marginTop: 20, marginLeft: 18, width: "96%",
+                padding: "20px 24px", borderRadius: 5, border: "1px solid #E5E7EB",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+                <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, color: C.textDark }}>
+                    Mon Profil
+                </h1>
+                <span style={{ fontSize: 13, color: C.textGrey }}>
+                    Gérez vos informations personnelles
+                </span>
             </div>
 
-            <div style={{ padding: "28px 40px" }}>
-                <div style={{
-                    background: C.white, borderRadius: 10,
-                    padding: "40px 48px 36px",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-                    maxWidth: 900, margin: "0 auto",
-                    marginTop: 70,
-                }}>
+            <div style={{ padding: "24px 18px 60px", display: "flex", gap: 24, flexWrap: "wrap" }}>
 
-                    {/* ── Champs lecture seule ── */}
-                    <ChampLecture label="Numéro d'identification fiscale" valeur={nif} />
-                    <ChampLecture label="Structure Fiscale"               valeur={structureFiscale} />
-                    <ChampLecture label="Noms complets"                   valeur={nomsComplets} />
-
-                    {/* ── Séparateur visuel ── */}
-                    <div style={{ height: 12 }} />
-
-                    {/* ── Champs éditables ── */}
-                    <ChampInput
-                        label="Email"
-                        type="email"
-                        value={email}
-                        onChange={setEmail}
-                        requis
-                    />
-                    <ChampInput
-                        label="Email additionnel (Optionel)"
-                        type="email"
-                        value={emailAdditionnel}
-                        onChange={setEmailAdditionnel}
-                        requis={false}
-                    />
-                    <ChampInput
-                        label="Phone number"
-                        type="tel"
-                        value={telephone}
-                        onChange={setTelephone}
-                        requis
-                    />
-                    <ChampSelect
-                        label="Commune"
-                        value={commune}
-                        onChange={setCommune}
-                        options={COMMUNES}
-                        requis
-                    />
-
-                    {/* ── Message retour ── */}
-                    {enregistrement === "succes" && (
-                        <div style={{ marginBottom: 16, padding: "10px 16px", background: "#DCFCE7", color: "#16A34A", borderRadius: 6, fontSize: 14, fontWeight: 500 }}>
-                            ✓ Profil mis à jour avec succès.
+                {/* ── Panneau gauche : switcher de profils ─────────────────── */}
+                <div style={{ width: 280, flexShrink: 0 }}>
+                    <div style={{
+                        background: "#fff", borderRadius: 10, padding: 20,
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+                        border: "1px solid #E5E7EB",
+                    }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: C.textGrey, margin: "0 0 14px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                            Profils disponibles
+                        </p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                            {profils.map((p) => (
+                                <ProfilCard
+                                    key={p.id}
+                                    profil={p}
+                                    actif={profilId === p.id}
+                                    onClick={() => setProfilId(p.id)}
+                                />
+                            ))}
                         </div>
-                    )}
-                    {enregistrement === "erreur" && (
-                        <div style={{ marginBottom: 16, padding: "10px 16px", background: "#FEE2E2", color: "#DC2626", borderRadius: 6, fontSize: 14, fontWeight: 500 }}>
-                            Veuillez remplir tous les champs obligatoires.
-                        </div>
-                    )}
-
-                    {/* ── Bouton Continuer ── */}
-                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-                        <button
-                            onClick={handleContinuer}
-                            disabled={chargement}
-                            style={{
-                                padding: "12px 32px",
-                                background: chargement ? "#F5C77E" : C.orange,
-                                color: C.white, border: "none",
-                                borderRadius: 6, fontSize: 15, fontWeight: 600,
-                                cursor: chargement ? "not-allowed" : "pointer",
-                                transition: "background 0.2s",
-                                minWidth: 140,
-                            }}
-                            onMouseEnter={(e) => { if (!chargement) e.currentTarget.style.background = "#E09510"; }}
-                            onMouseLeave={(e) => { if (!chargement) e.currentTarget.style.background = C.orange; }}
-                        >
-                            {chargement ? "Enregistrement..." : "Continuer"}
-                        </button>
                     </div>
+                </div>
 
+                {/* ── Panneau droit : formulaire ───────────────────────────── */}
+                <div style={{ flex: 1, minWidth: 300 }}>
+                    <div style={{
+                        background: "#fff", borderRadius: 10,
+                        padding: "40px 48px 36px",
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+                        border: "1px solid #E5E7EB",
+                    }}>
+                        {/* En-tête du formulaire */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32 }}>
+                            <Avatar initiales={mockProfil.initiales ?? "??"} bg={couleur} />
+                            <div>
+                                <p style={{ fontSize: 18, fontWeight: 700, margin: 0, color: C.textDark }}>
+                                    {nomsComplets}
+                                </p>
+                                <p style={{ fontSize: 13, color: C.textGrey, margin: "4px 0 0" }}>
+                                    {structureFisc}
+                                </p>
+                                {centre && ROLE_BADGE[centre] && (
+                                    <span style={{
+                                        fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999,
+                                        background: ROLE_BADGE[centre].bg, color: ROLE_BADGE[centre].color,
+                                        display: "inline-block", marginTop: 6,
+                                    }}>
+                                        {ROLE_BADGE[centre].label}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {loading ? (
+                            <div style={{ textAlign: "center", padding: "40px 0", color: C.textGrey }}>
+                                <div style={{ fontSize: 14 }}>Chargement du profil...</div>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Champs lecture seule */}
+                                <ChampLecture label="Numéro d'identification fiscale" valeur={nif} />
+                                <ChampLecture label="Structure Fiscale"               valeur={structureFisc} />
+                                <ChampLecture label="Noms complets"                   valeur={nomsComplets} />
+
+                                <div style={{ height: 12 }} />
+
+                                {/* Champs éditables */}
+                                <ChampInput
+                                    label="Email"
+                                    type="email"
+                                    value={email}
+                                    onChange={setEmail}
+                                    requis
+                                />
+                                <ChampInput
+                                    label="Email additionnel (Optionnel)"
+                                    type="email"
+                                    value={emailAdditionnel}
+                                    onChange={setEmailAdditionnel}
+                                    requis={false}
+                                />
+                                <ChampInput
+                                    label="Numéro de téléphone"
+                                    type="tel"
+                                    value={telephone}
+                                    onChange={setTelephone}
+                                    requis
+                                />
+                                <ChampSelect
+                                    label="Commune"
+                                    value={commune}
+                                    onChange={setCommune}
+                                    options={COMMUNES}
+                                    requis
+                                />
+
+                                {/* Messages */}
+                                {enregistrement === "succes" && (
+                                    <div style={{ marginBottom: 16, padding: "10px 16px", background: "#DCFCE7", color: "#16A34A", borderRadius: 6, fontSize: 14, fontWeight: 500 }}>
+                                        ✓ Profil mis à jour avec succès.
+                                    </div>
+                                )}
+                                {enregistrement === "erreur" && (
+                                    <div style={{ marginBottom: 16, padding: "10px 16px", background: "#FEE2E2", color: "#DC2626", borderRadius: 6, fontSize: 14, fontWeight: 500 }}>
+                                        Veuillez remplir tous les champs obligatoires.
+                                    </div>
+                                )}
+
+                                {/* Bouton */}
+                                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                                    <button
+                                        onClick={handleContinuer}
+                                        disabled={chargement}
+                                        style={{
+                                            padding: "12px 32px",
+                                            background: chargement ? "#F5C77E" : couleur,
+                                            color: "#fff", border: "none",
+                                            borderRadius: 6, fontSize: 15, fontWeight: 600,
+                                            cursor: chargement ? "not-allowed" : "pointer",
+                                            transition: "background 0.2s",
+                                            minWidth: 140,
+                                        }}
+                                    >
+                                        {chargement ? "Enregistrement..." : "Continuer"}
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
         </main>

@@ -5,6 +5,69 @@
     "initiales": "EE",
     "role": "CONTRIBUABLE"
   },
+  "profils": [
+    {
+      "id": 1,
+      "nom": "ESSOMBA EVEGA ALOYS STEPHANE",
+      "prenom": "Aloys Stéphane",
+      "initiales": "EE",
+      "nif": "P120616628524A",
+      "structureFiscale": "CDI YAOUNDE 2",
+      "role": "CONTRIBUABLE",
+      "email": "aloys.essomba@gmail.com",
+      "emailAdditionnel": "",
+      "telephone": "237691234567",
+      "commune": "Yaoundé 2",
+      "type": "contribuable",
+      "centre": null
+    },
+    {
+      "id": 2,
+      "nom": "MBALLA NATHAN",
+      "prenom": "Nathan",
+      "initiales": "NM",
+      "nif": "P220617745823B",
+      "structureFiscale": "CGA YAOUNDE",
+      "role": "ADHERANT_CGA",
+      "email": "nathan.mballa@cga.cm",
+      "emailAdditionnel": "n.mballa@yahoo.fr",
+      "telephone": "237677889900",
+      "commune": "Yaoundé 3",
+      "type": "adherant",
+      "centre": "CGA"
+    },
+    {
+      "id": 3,
+      "nom": "FOUDA EVAN",
+      "prenom": "Evan",
+      "initiales": "EF",
+      "nif": "P330618856934C",
+      "structureFiscale": "DGE DOUALA",
+      "role": "CONTRIBUABLE_DGE",
+      "email": "evan.fouda@dge.cm",
+      "emailAdditionnel": "",
+      "telephone": "237655443322",
+      "commune": "Douala 2",
+      "type": "contribuable",
+      "centre": "DGE"
+    },
+    {
+      "id": 4,
+      "nom": "NKODO EVAN",
+      "prenom": "Evan",
+      "initiales": "EN",
+      "nif": "P440619967045D",
+      "structureFiscale": "CIS BAFOUSSAM",
+      "role": "ADHERANT_CIS",
+      "email": "evan.nkodo@cis.cm",
+      "emailAdditionnel": "evannkodo@gmail.com",
+      "telephone": "237699112233",
+      "commune": "Bafoussam 1",
+      "type": "adherant",
+      "centre": "CIS"
+    }
+  ],
+  "profilActif": 1,
   "dprListe": [
     { "reference": "AV-GNR-220262371657", "annee": 2025 },
     { "reference": "AV-GNR-220252468594", "annee": 2023 },
@@ -15,9 +78,53 @@
     { "reference": "AV-GNR-220252468594", "annee": 2023 }
   ],
   "amrListe": [],
+  "amrMiseEnDemeure": [
+    {
+      "id": 1,
+      "anneeFiscale": 2025,
+      "refDeclaration": "DPR-2025-001234",
+      "structureFiscale": "CDI YAOUNDE 2",
+      "statut": "EN_COURS",
+      "dateDeclaration": "2025-03-15T10:30:00"
+    },
+    {
+      "id": 2,
+      "anneeFiscale": 2024,
+      "refDeclaration": "DPR-2024-005678",
+      "structureFiscale": "CDI YAOUNDE 2",
+      "statut": "CLOTUREE",
+      "dateDeclaration": "2024-06-20T09:00:00"
+    },
+    {
+      "id": 3,
+      "anneeFiscale": 2023,
+      "refDeclaration": "DPR-2023-009012",
+      "structureFiscale": "CDI YAOUNDE 2",
+      "statut": "ANNULEE",
+      "dateDeclaration": "2023-11-10T14:00:00"
+    }
+  ],
+  "amrValidees": [
+    {
+      "id": 4,
+      "anneeFiscale": 2025,
+      "refDeclaration": "DPR-2025-002345",
+      "structureFiscale": "CDI YAOUNDE 2",
+      "statut": "VALIDEE",
+      "dateDeclaration": "2025-02-01T08:00:00"
+    },
+    {
+      "id": 5,
+      "anneeFiscale": 2024,
+      "refDeclaration": "DPR-2024-006789",
+      "structureFiscale": "CDI YAOUNDE 2",
+      "statut": "REJETEE",
+      "dateDeclaration": "2024-09-05T11:30:00"
+    }
+  ],
   "statistiques": {
-    "dprGenerees": { "valeur": 1, "pourcentage": 100 },
-    "dprSoumises": { "valeur": 1, "pourcentage": 100 }
+    "dprGenerees": { "valeur": 3, "pourcentage": 100 },
+    "dprSoumises": { "valeur": 3, "pourcentage": 100 }
   },
   "notifications": [
     { "id": "n1", "message": "Déclaration IRPP 2024 disponible.", "lue": false },

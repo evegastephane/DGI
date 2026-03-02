@@ -1,21 +1,30 @@
 // src/lib/api/declarationApi.js
-// ─── API Déclarations ─────────────────────────────────────────────────────
+// ─── API Déclarations Patente ─────────────────────────────────────────────
 import { api } from "./apiClient";
 import { CURRENT_USER_ID } from "./contribuableApi";
 
-// GET /api/contribuables/:id/declarations → liste des DPR du contribuable
-export const getDeclarations = (id = CURRENT_USER_ID) =>
-    api.get(`/contribuables/${id}/declarations`);
-
-// GET /api/contribuables/:id/avis-imposition → liste des avis du contribuable
-export const getAvisImposition = (id = CURRENT_USER_ID) =>
-    api.get(`/contribuables/${id}/avis-imposition`);
+// GET /api/contribuables/:id/declarations → liste des déclarations du contribuable
+export const getDeclarations = async (id = CURRENT_USER_ID) => {
+    const data = await api.get(`/contribuables/${id}/declarations`);
+    const list = Array.isArray(data) ? data : (data.content || []);
+    return list.map((d) => ({
+        id:               d.idDeclaration,
+        reference:        d.referenceDeclaration || "—",
+        annee:            d.anneeFiscale,
+        statut:           d.statut,
+        type:             d.typeDeclaration,
+        structureFiscale: d.structureFiscale || "CDI YAOUNDE 2",
+        montantBrut:      d.montantAPayer || 0,
+        date:             d.dateSoumission || d.dateDeclaration,
+    }));
+};
 
 // GET /api/declarations/:id — détail complet d'une déclaration
 export const getDeclaration = (idDecl) =>
     api.get(`/declarations/${idDecl}`);
 
-// POST /api/declarations — soumettre une nouvelle déclaration
+// POST /api/declarations — créer une nouvelle déclaration Patente
+// → le backend génère automatiquement un Avis d'imposition
 export const creerDeclaration = (body) =>
     api.post("/declarations", body);
 
@@ -23,15 +32,25 @@ export const creerDeclaration = (body) =>
 export const modifierDeclaration = (idDecl, body) =>
     api.put(`/declarations/${idDecl}`, body);
 
-// PATCH /api/declarations/:id/statut — changer le statut
-export const changerStatutDeclaration = (idDecl, statut, motif_rejet = null) =>
-    api.patch(`/declarations/${idDecl}/statut`, { statut, motif_rejet });
-
 // GET /api/declarations/:id/paiements
 export const getPaiementsDeclaration = (idDecl) =>
     api.get(`/declarations/${idDecl}/paiements`);
 
 // POST /api/etablissements — enregistrer un établissement
-export const creerEtablissement = (body) =>
-    api.post("/etablissements", body);
-
+// Note: EtablissementController retourne directement l'objet (sans wrapper success/data)
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+export const creerEtablissement = async (body) => {
+    const res = await fetch(`${BASE_URL}/etablissements`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            nom: body.nomEtablissement,
+            idContribuable: body.idContribuable,
+        }),
+    });
+    if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || `Erreur HTTP ${res.status}`);
+    }
+    return res.json();
+};

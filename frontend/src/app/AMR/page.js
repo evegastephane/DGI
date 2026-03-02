@@ -2,40 +2,54 @@
 
 import { useState, useRef, useEffect } from "react";
 import C from "../lib/utils/colors";
-import mockData from "../data/mockData.json";
+import { getAMRs, CURRENT_USER_ID } from "../lib/api/contribuableApi";
+import { ChevDown, ChevUp } from "../components/ui/Icons";
 
 // ─── Colonnes ─────────────────────────────────────────────────────────────
 const COLUMNS_MISE_EN_DEMEURE = [
-    { key: "anneeFiscale",      label: "Année fiscale"      },
-    { key: "refDeclaration",    label: "Ref Declaration"    },
-    { key: "structureFiscale",  label: "Structure Fiscale"  },
-    { key: "statut",            label: "Statut"             },
-    { key: "dateDeclaration",   label: "Date de declaration"},
+    { key: "anneeFiscale",     label: "Année fiscale"       },
+    { key: "reference",        label: "Réf. AMR"            },
+    { key: "numeroAMR",        label: "N° AMR"              },
+    { key: "statut",           label: "Statut"              },
+    { key: "motif",            label: "Motif"               },
+    { key: "montantInitial",   label: "Montant initial"     },
+    { key: "montantTotal",     label: "Montant total"       },
+    { key: "dateEmission",     label: "Date d'émission"     },
 ];
 
 const COLUMNS_AMR_VALIDEES = [
-    { key: "anneeFiscale",      label: "Année fiscale"      },
-    { key: "refDeclaration",    label: "Ref Declaration"    },
-    { key: "structureFiscale",  label: "Structure Fiscale"  },
-    { key: "statut",            label: "Statut"             },
-    { key: "dateDeclaration",   label: "Date de declaration"},
+    { key: "anneeFiscale",     label: "Année fiscale"       },
+    { key: "reference",        label: "Réf. AMR"            },
+    { key: "numeroAMR",        label: "N° AMR"              },
+    { key: "statut",           label: "Statut"              },
+    { key: "motif",            label: "Motif"               },
+    { key: "montantInitial",   label: "Montant initial"     },
+    { key: "montantMajorations", label: "Majorations (10%)" },
+    { key: "montantTotal",     label: "Montant total"       },
+    { key: "dateEmission",     label: "Date d'émission"     },
 ];
 
 const EXERCICE_OPTIONS = ["2025", "2024", "2023", "2022"];
 
 const STATUT_OPTIONS_MISE = [
     { value: "EN_COURS",  label: "EN COURS"  },
-    { value: "CLOTUREE",  label: "CLOTURÉE"  },
+    { value: "CLOTUREE",  label: "CLÔTURÉE"  },
     { value: "ANNULEE",   label: "ANNULÉE"   },
+    { value: "CONTESTE",  label: "CONTESTÉ"  },
 ];
 
 const STATUT_OPTIONS_AMR = [
     { value: "VALIDEE",   label: "VALIDÉE"   },
     { value: "REJETEE",   label: "REJETÉE"   },
     { value: "EN_COURS",  label: "EN COURS"  },
+    { value: "APURE",     label: "APURÉ"     },
 ];
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+const formatMontant = (v) =>
+    v != null ? `${Number(v).toLocaleString("fr-FR")} FCFA` : "—";
 
 // ─── Checkbox orange ──────────────────────────────────────────────────────
 function OrangeCheckbox({ checked, onChange }) {
@@ -118,6 +132,8 @@ function Badge({ statut }) {
         ANNULEE:   { label: "ANNULÉE",   bg: "#FEE2E2", color: "#DC2626" },
         VALIDEE:   { label: "VALIDÉE",   bg: "#DCFCE7", color: "#16A34A" },
         REJETEE:   { label: "REJETÉE",   bg: "#FEE2E2", color: "#DC2626" },
+        APURE:     { label: "APURÉ",     bg: "#DBEAFE", color: "#1D4ED8" },
+        CONTESTE:  { label: "CONTESTÉ",  bg: "#FFF7ED", color: "#C2410C" },
     };
     const s = map[statut] ?? { label: statut?.toUpperCase() ?? "—", bg: "#F3F4F6", color: "#6B7280" };
     return (
@@ -128,13 +144,13 @@ function Badge({ statut }) {
 }
 
 // ─── Icônes SVG ───────────────────────────────────────────────────────────
-const IcoUp     = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>;
-const IcoDown   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>;
-const IcoFilter = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>;
-const IcoHide   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
-const IcoCols   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>;
-const IcoLeft   = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>;
-const IcoRight  = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>;
+const IcoUp    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>;
+const IcoDown  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>;
+const IcoFilter= () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>;
+const IcoHide  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
+const IcoCols  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>;
+const IcoLeft  = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>;
+const IcoRight = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>;
 
 // ─── Menu contextuel de colonne ───────────────────────────────────────────
 function ColumnMenu({ colKey, onSort, onHide, onManage, onClose }) {
@@ -146,13 +162,11 @@ function ColumnMenu({ colKey, onSort, onHide, onManage, onClose }) {
     }, [onClose]);
 
     const item = (onClick, icon, label) => (
-        <button
-            onClick={onClick}
-            style={{
-                display: "flex", alignItems: "center", gap: 10, width: "100%",
-                padding: "10px 16px", border: "none", background: "transparent",
-                cursor: "pointer", fontSize: 13, color: C.textDark, textAlign: "left",
-            }}
+        <button onClick={onClick} style={{
+            display: "flex", alignItems: "center", gap: 10, width: "100%",
+            padding: "10px 16px", border: "none", background: "transparent",
+            cursor: "pointer", fontSize: 13, color: C.textDark, textAlign: "left",
+        }}
             onMouseEnter={(e) => (e.currentTarget.style.background = C.orangeBg)}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
         >
@@ -166,13 +180,13 @@ function ColumnMenu({ colKey, onSort, onHide, onManage, onClose }) {
             background: C.white, border: `1px solid ${C.border}`,
             borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", minWidth: 200, overflow: "hidden",
         }}>
-            {item(() => { onSort(colKey, "asc");  onClose(); }, <IcoUp />,     "Sort by ASC"    )}
-            {item(() => { onSort(colKey, "desc"); onClose(); }, <IcoDown />,   "Sort by DESC"   )}
+            {item(() => { onSort(colKey, "asc");  onClose(); }, <IcoUp />,    "Sort by ASC"   )}
+            {item(() => { onSort(colKey, "desc"); onClose(); }, <IcoDown />,  "Sort by DESC"  )}
             <div style={{ borderTop: `1px solid #F3F4F6`, margin: "4px 0" }} />
-            {item(() => onClose(),                              <IcoFilter />, "Filter"         )}
+            {item(() => onClose(),                             <IcoFilter />, "Filter"        )}
             <div style={{ borderTop: `1px solid #F3F4F6`, margin: "4px 0" }} />
-            {item(() => { onHide(colKey); onClose(); },         <IcoHide />,   "Hide column"    )}
-            {item(() => { onManage(); onClose(); },             <IcoCols />,   "Manage columns" )}
+            {item(() => { onHide(colKey); onClose(); },        <IcoHide />,  "Hide column"   )}
+            {item(() => { onManage(); onClose(); },            <IcoCols />,  "Manage columns")}
         </div>
     );
 }
@@ -210,8 +224,8 @@ function ManageColumnsModal({ allColumns, hiddenCols, onToggle, onClose }) {
     );
 }
 
-// ─── Sous-composant onglet (tableau + pagination + recherche) ─────────────
-function OngletTable({ sourceData, allColumns, statutOptions, tabKey }) {
+// ─── Onglet tableau (AMR depuis API) ─────────────────────────────────────
+function OngletTable({ allColumns, statutOptions, statutFiltreMise }) {
     const [rechercheOuverte, setRechercheOuverte] = useState(false);
     const [exerciceSaisi,    setExerciceSaisi]    = useState("");
     const [exerciceOpen,     setExerciceOpen]     = useState(false);
@@ -224,11 +238,33 @@ function OngletTable({ sourceData, allColumns, statutOptions, tabKey }) {
     const [manageOpen,       setManageOpen]       = useState(false);
     const [rowsPerPage,      setRowsPerPage]      = useState(10);
     const [page,             setPage]             = useState(0);
-    const [dataFiltree,      setDataFiltree]      = useState(sourceData);
+    const [sourceData,       setSourceData]       = useState([]);
+    const [dataFiltree,      setDataFiltree]      = useState([]);
+    const [loading,          setLoading]          = useState(true);
 
     const exerciceRef = useRef(null);
     const statutRef   = useRef(null);
 
+    // Chargement initial depuis l'API
+    useEffect(() => {
+        setLoading(true);
+        getAMRs({ id_contribuable: CURRENT_USER_ID })
+            .then((data) => {
+                // Filtrer par type d'onglet si nécessaire
+                const filtered = statutFiltreMise
+                    ? data.filter(a => ["EN_COURS", "CLOTUREE", "ANNULEE", "CONTESTE"].includes(a.statut?.toUpperCase()))
+                    : data.filter(a => ["VALIDEE", "REJETEE", "APURE"].includes(a.statut?.toUpperCase()));
+                setSourceData(filtered);
+                setDataFiltree(filtered);
+            })
+            .catch(() => {
+                setSourceData([]);
+                setDataFiltree([]);
+            })
+            .finally(() => setLoading(false));
+    }, [statutFiltreMise]);
+
+    // Fermer dropdowns au clic extérieur
     useEffect(() => {
         const h = (e) => {
             if (exerciceRef.current && !exerciceRef.current.contains(e.target)) setExerciceOpen(false);
@@ -249,13 +285,18 @@ function OngletTable({ sourceData, allColumns, statutOptions, tabKey }) {
         let result = [...sourceData];
         if (exerciceSaisi.trim()) {
             const annee = parseInt(exerciceSaisi.replace(/\D/g, ""));
-            if (!isNaN(annee)) result = result.filter((r) => r.anneeFiscale === annee);
+            if (!isNaN(annee)) result = result.filter((r) => r.anneeFiscale === annee || String(r.annee) === String(annee));
         }
         if (statutsSelec.length > 0) {
-            result = result.filter((r) => statutsSelec.includes(r.statut));
+            result = result.filter((r) => statutsSelec.includes(r.statut?.toUpperCase()));
         }
         setDataFiltree(result);
         setPage(0);
+    };
+
+    const handleClearExercice = () => {
+        setExerciceSaisi("");
+        setDataFiltree(sourceData);
     };
 
     const sorted = [...dataFiltree].sort((a, b) => {
@@ -283,27 +324,52 @@ function OngletTable({ sourceData, allColumns, statutOptions, tabKey }) {
         borderBottom: `1px solid #F3F4F6`, verticalAlign: "middle", whiteSpace: "nowrap",
     };
 
+    const getCellValue = (col, row) => {
+        switch (col.key) {
+            case "statut":
+                return <Badge statut={row.statut} />;
+            case "dateEmission":
+                return row.dateEmission
+                    ? new Date(row.dateEmission).toLocaleDateString("fr-FR")
+                    : "—";
+            case "montantInitial":
+                return formatMontant(row.montantInitial);
+            case "montantMajorations":
+                return formatMontant(row.montantMajorations);
+            case "montantTotal":
+                return <span style={{ fontWeight: 600, color: C.orange }}>{row.montantTotal ?? "—"}</span>;
+            case "reference":
+            case "numeroAMR":
+                return (
+                    <span style={{ fontFamily: "monospace", color: C.orange, fontWeight: 600 }}>
+                        {row[col.key] ?? "—"}
+                    </span>
+                );
+            default:
+                return row[col.key] ?? "—";
+        }
+    };
+
     return (
         <>
             {/* ── Recherche avancée ── */}
-            <div style={{ background: C.white, borderBottom: `1px solid #E5E7EB` }}>
+            <div style={{ background: C.white, width: "96%", marginLeft: "18px" }}>
                 <div
                     onClick={() => setRechercheOuverte(!rechercheOuverte)}
                     style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 28px", cursor: "pointer", userSelect: "none" }}
                 >
-                    <span style={{ fontWeight: 500, fontSize: 15, color: C.textDark }}>Recherche avancée</span>
-                    <span style={{ fontSize: 18, color: C.textGrey }}>{rechercheOuverte ? "∧" : "∨"}</span>
+                    <span style={{ fontWeight: 600, fontSize: 16, color: C.textDark, marginLeft: "-15px" }}>Recherche avancée</span>
+                    <span style={{ fontSize: 18, color: C.textGrey }}>{rechercheOuverte ? <ChevUp /> : <ChevDown />}</span>
                 </div>
 
                 {rechercheOuverte && (
                     <div style={{ display: "flex", gap: 16, padding: "4px 28px 24px", alignItems: "flex-end", flexWrap: "wrap" }}>
-
                         {/* Exercice */}
                         <div ref={exerciceRef} style={{ flex: 1, minWidth: 200, position: "relative" }}>
                             <OutlinedInput
                                 label="Exercice"
                                 value={exerciceSaisi ? `EXERCICE ${exerciceSaisi}` : ""}
-                                onClear={() => { setExerciceSaisi(""); setDataFiltree(sourceData); }}
+                                onClear={handleClearExercice}
                                 onClick={() => setExerciceOpen(!exerciceOpen)}
                                 open={exerciceOpen}
                             >
@@ -313,16 +379,6 @@ function OngletTable({ sourceData, allColumns, statutOptions, tabKey }) {
                                         background: C.white, border: `1px solid ${C.border}`,
                                         borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", overflow: "hidden",
                                     }}>
-                                        <div style={{ padding: "8px 12px", borderBottom: `1px solid ${C.border}` }}>
-                                            <input
-                                                type="number" placeholder="Saisir une année..."
-                                                value={exerciceSaisi}
-                                                onChange={(e) => setExerciceSaisi(e.target.value)}
-                                                onClick={(e) => e.stopPropagation()}
-                                                style={{ width: "100%", border: `1px solid ${C.border}`, borderRadius: 4, padding: "6px 10px", fontSize: 13, outline: "none" }}
-                                                autoFocus
-                                            />
-                                        </div>
                                         {EXERCICE_OPTIONS.map((ex) => (
                                             <div
                                                 key={ex}
@@ -415,29 +471,29 @@ function OngletTable({ sourceData, allColumns, statutOptions, tabKey }) {
 
             {/* ── Compteur rows ── */}
             <div style={{ background: "#F3F4F6", padding: "10px 28px", textAlign: "right", fontSize: 13, color: C.textGrey }}>
-                showing {totalRows === 0 ? 0 : rangeStart}–{rangeEnd} of {totalRows} rows
+                {loading ? "Chargement..." : `showing ${totalRows === 0 ? 0 : rangeStart}–${rangeEnd} of ${totalRows} rows`}
             </div>
 
             {/* ── Tableau ── */}
-            <div style={{ background: C.white, overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
+            <div style={{ background: C.white, overflowX: "auto", width: "96%", marginLeft: "18px", border: "1px solid lightGray" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
                     <thead>
                     <tr>
                         {visibleColumns.map((col) => (
                             <th key={col.key} style={thStyle}>
                                 <div
-                                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", gap: 6 }}
+                                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", gap: 6, fontSize: 11 }}
                                     onMouseEnter={(e) => { const btn = e.currentTarget.querySelector(".col-menu-btn"); if (btn) btn.style.opacity = "1"; }}
                                     onMouseLeave={(e) => { const btn = e.currentTarget.querySelector(".col-menu-btn"); if (btn && openMenu !== col.key) btn.style.opacity = "0"; }}
                                 >
-                                        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                            {col.label}
-                                            {sortKey === col.key && (
-                                                <span style={{ color: C.orange }}>
-                                                    {sortDir === "asc" ? <IcoUp /> : <IcoDown />}
-                                                </span>
-                                            )}
-                                        </span>
+                                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                        {col.label}
+                                        {sortKey === col.key && (
+                                            <span style={{ color: C.orange }}>
+                                                {sortDir === "asc" ? <IcoUp /> : <IcoDown />}
+                                            </span>
+                                        )}
+                                    </span>
                                     <button
                                         className="col-menu-btn"
                                         onClick={(e) => { e.stopPropagation(); setOpenMenu(openMenu === col.key ? null : col.key); }}
@@ -463,7 +519,13 @@ function OngletTable({ sourceData, allColumns, statutOptions, tabKey }) {
                     </tr>
                     </thead>
                     <tbody>
-                    {rows.length === 0 ? (
+                    {loading ? (
+                        <tr>
+                            <td colSpan={visibleColumns.length} style={{ padding: "60px 20px", textAlign: "center", color: C.textGrey, fontSize: 14 }}>
+                                Chargement des AMR...
+                            </td>
+                        </tr>
+                    ) : rows.length === 0 ? (
                         <tr>
                             <td colSpan={visibleColumns.length} style={{ padding: "60px 20px", textAlign: "center", color: C.textGrey, fontSize: 14 }}>
                                 Aucun AMR ne correspond aux critères sélectionnés.
@@ -479,19 +541,7 @@ function OngletTable({ sourceData, allColumns, statutOptions, tabKey }) {
                             >
                                 {visibleColumns.map((col) => (
                                     <td key={col.key} style={tdStyle}>
-                                        {col.key === "statut" ? (
-                                            <Badge statut={row.statut} />
-                                        ) : col.key === "dateDeclaration" ? (
-                                            row.dateDeclaration
-                                                ? new Date(row.dateDeclaration).toLocaleDateString("fr-FR")
-                                                : "—"
-                                        ) : col.key === "refDeclaration" ? (
-                                            <span style={{ fontFamily: "monospace", color: C.orange, fontWeight: 600 }}>
-                                                    {row.refDeclaration ?? "—"}
-                                                </span>
-                                        ) : (
-                                            row[col.key] ?? "—"
-                                        )}
+                                        {getCellValue(col, row)}
                                     </td>
                                 ))}
                             </tr>
@@ -503,13 +553,11 @@ function OngletTable({ sourceData, allColumns, statutOptions, tabKey }) {
 
             {/* ── Pagination ── */}
             <div style={{
-                background: C.white, borderTop: `1px solid #E5E7EB`,
+                background: C.white, borderTop: `1px solid #E5E7EB`, width: "96%", marginLeft: "18px",
                 display: "flex", alignItems: "center", justifyContent: "flex-end",
                 gap: 16, padding: "12px 28px", fontSize: 13, color: C.textGrey,
             }}>
                 <span>Rows per page:</span>
-
-                {/* Select rows per page */}
                 <div style={{ position: "relative" }}>
                     <select
                         value={rowsPerPage}
@@ -524,9 +572,7 @@ function OngletTable({ sourceData, allColumns, statutOptions, tabKey }) {
                     </select>
                     <span style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: 10, color: C.textGrey }}>▼</span>
                 </div>
-
                 <span>{totalRows === 0 ? "0–0" : `${rangeStart}–${rangeEnd}`} of {totalRows}</span>
-
                 <button
                     onClick={() => setPage(page - 1)} disabled={page === 0}
                     style={{ background: "none", border: "none", cursor: page === 0 ? "not-allowed" : "pointer", color: page === 0 ? "#D1D5DB" : C.textGrey, display: "flex", padding: 4 }}
@@ -558,9 +604,6 @@ function OngletTable({ sourceData, allColumns, statutOptions, tabKey }) {
 export default function PageListeDesAMRs() {
     const [ongletActif, setOngletActif] = useState("mise_en_demeure");
 
-    const dataMiseEnDemeure = mockData.amrMiseEnDemeure ?? [];
-    const dataAmrValidees   = mockData.amrValidees      ?? [];
-
     const onglets = [
         { key: "mise_en_demeure", label: "Mise en demeure" },
         { key: "amr_validees",    label: "AMR validées"    },
@@ -570,12 +613,12 @@ export default function PageListeDesAMRs() {
         <main style={{ flex: 1, background: "#F3F4F6", display: "flex", flexDirection: "column" }}>
 
             {/* ── Titre ── */}
-            <div style={{ background: C.white, padding: "20px 28px", borderBottom: `1px solid #E5E7EB` }}>
-                <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: C.textDark }}>Liste des AMRs</h1>
+            <div style={{ background: C.white, marginTop: "20px", marginLeft: "18px", width: "96%", padding: "20px 16px", borderBottom: `1px solid #E5E7EB`, borderRadius: "5px", height: "60px" }}>
+                <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, color: C.textDark, padding: "0px 0px" }}>Liste des AMRs</h1>
             </div>
 
             {/* ── Onglets ── */}
-            <div style={{ background: C.white, borderBottom: `1px solid #E5E7EB`, display: "flex", gap: 0, padding: "0 28px" }}>
+            <div style={{ background: C.white, borderBottom: `1px solid #E5E7EB`, display: "flex", gap: 0, padding: "0 28px", width: "96%", marginLeft: "18px" }}>
                 {onglets.map((o) => {
                     const actif = ongletActif === o.key;
                     return (
@@ -586,7 +629,7 @@ export default function PageListeDesAMRs() {
                                 padding: "14px 24px", border: "none", background: "none",
                                 cursor: "pointer", fontSize: 14, fontWeight: actif ? 600 : 400,
                                 color: actif ? C.textDark : C.textGrey,
-                                borderBottom: actif ? `2px solid ${C.textDark}` : "2px solid transparent",
+                                borderBottom: actif ? `2px solid ${C.orange}` : "2px solid transparent",
                                 marginBottom: -1, transition: "all 0.15s",
                             }}
                             onMouseEnter={(e) => { if (!actif) e.currentTarget.style.color = C.textDark; }}
@@ -598,25 +641,25 @@ export default function PageListeDesAMRs() {
                 })}
             </div>
 
-            {/* ── Contenu de l'onglet actif ── */}
-            {ongletActif === "mise_en_demeure" && (
-                <OngletTable
-                    key="mise_en_demeure"
-                    sourceData={dataMiseEnDemeure}
-                    allColumns={COLUMNS_MISE_EN_DEMEURE}
-                    statutOptions={STATUT_OPTIONS_MISE}
-                    tabKey="mise_en_demeure"
-                />
-            )}
-            {ongletActif === "amr_validees" && (
-                <OngletTable
-                    key="amr_validees"
-                    sourceData={dataAmrValidees}
-                    allColumns={COLUMNS_AMR_VALIDEES}
-                    statutOptions={STATUT_OPTIONS_AMR}
-                    tabKey="amr_validees"
-                />
-            )}
+            {/* ── Contenu ── */}
+            <div style={{ padding: "25px 0 40px" }}>
+                {ongletActif === "mise_en_demeure" && (
+                    <OngletTable
+                        key="mise_en_demeure"
+                        allColumns={COLUMNS_MISE_EN_DEMEURE}
+                        statutOptions={STATUT_OPTIONS_MISE}
+                        statutFiltreMise={true}
+                    />
+                )}
+                {ongletActif === "amr_validees" && (
+                    <OngletTable
+                        key="amr_validees"
+                        allColumns={COLUMNS_AMR_VALIDEES}
+                        statutOptions={STATUT_OPTIONS_AMR}
+                        statutFiltreMise={false}
+                    />
+                )}
+            </div>
         </main>
     );
 }
