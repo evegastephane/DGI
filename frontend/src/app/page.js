@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import C from "../app/lib/utils/colors";
 
 // ── Layout ────────────────────────────────────────────────────────────────
@@ -12,32 +12,61 @@ import Footer  from "../app/components/layout/Footer";
 import PageDashboard          from "../app/dashboard/page";
 import PageListeDesAvis from "../app/avis/page";
 import { PageStep1, PageStep2 } from "../app/declaration/page";
+import MesDeclarations from "./components/declarations/MesDeclarations";
 import ListePaiementsPage from "./Paiements/page";
 import PageListeDesAMRs from "./AMR/page";
 import PageNotifications from "./notifications/page";
 import PageMonProfil from "./Profile/page";
+import PageAuthentifier from "./authentifier/page";
+import TabAjoutEtablissement from "./components/declarations/TabAjoutEtablissement";
 
-// ── Données ───────────────────────────────────────────────────────────────
-import mockData from "./data/mockData.json";
-
-
+// ── API ───────────────────────────────────────────────────────────────────
+import { getNotifications, CURRENT_USER_ID } from "./lib/api/contribuableApi";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // page.js — Point d'entrée principal
-//
-// Gestion de la navigation par état (pas de router Next.js ici)
-// page peut valoir :
-//   "dashboard"   → Tableau de bord
-//   "declaration" → Étape 1 — choisir l'exercice
-//   "step2"       → Étape 2 — formulaire Déclaration Patente
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function App() {
     const [page, setPage]   = useState("dashboard");
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [declarationContext, setDeclarationContext] = useState({});
+    const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0);
 
-    // Nombre de notifications non lues → badge dans le header
-    const notifCount = mockData.notifications.filter((n) => !n.lue).length;
+    // ── Compteur de notifications non lues (badge cloche) ─────────────────
+    const [notifCount, setNotifCount] = useState(0);
+    const [notifRefreshKey, setNotifRefreshKey] = useState(0);
+
+    const refreshNotifCount = useCallback(async () => {
+        try {
+            const notifs = await getNotifications(CURRENT_USER_ID);
+            setNotifCount(notifs.filter((n) => !n.lu).length);
+        } catch {
+            // silencieux — le badge restera à 0 si le backend est inaccessible
+        }
+    }, []);
+
+    // Charger au démarrage
+    useEffect(() => {
+        refreshNotifCount();
+    }, [refreshNotifCount]);
+
+    // Rafraîchir le badge toutes les 30 secondes (polling léger)
+    useEffect(() => {
+        const interval = setInterval(refreshNotifCount, 30000);
+        return () => clearInterval(interval);
+    }, [refreshNotifCount]);
+
+    // Appelé depuis TabRecapitulatif après soumission réussie → refresh dashboard + notifs
+    const onDeclarationSoumise = () => {
+        setDashboardRefreshKey(k => k + 1);
+        // Refresh badge + page notifications avec un léger délai pour laisser le backend créer la notif
+        setTimeout(() => {
+            refreshNotifCount();
+            setNotifRefreshKey(k => k + 1);
+        }, 800);
+        setPage("dashboard");
+    };
 
     return (
         <div style={{
@@ -45,7 +74,6 @@ export default function App() {
             minHeight: "100vh",
             fontFamily: "'Segoe UI', Arial, sans-serif",
             background: C.bg,
-
         }}>
 
             {/* ── Sidebar (masquée quand sidebarOpen = false) ── */}
@@ -64,17 +92,29 @@ export default function App() {
                     sidebarOpen={sidebarOpen}
                     setSidebarOpen={setSidebarOpen}
                     notifCount={notifCount}
+                    onNotifCountChange={setNotifCount}
+                    setPage={setPage}
+                    refreshKey={notifRefreshKey}
                 />
 
                 {/* Rendu conditionnel de la page active */}
-                {page === "dashboard"   && <PageDashboard setPage={setPage} />}
-                {page === "declaration" && <PageStep1 setPage={setPage} />}
-                {page === "step2"       && <PageStep2 setPage={setPage} />}
+                {page === "dashboard"   && <PageDashboard setPage={setPage} refreshKey={dashboardRefreshKey} />}
+                {page === "declaration" && <PageStep1 setPage={setPage} setDeclarationContext={setDeclarationContext} />}
+                {page === "mesDeclarations" && <MesDeclarations setPage={setPage} />}
+                {page === "step2"       && <PageStep2 setPage={setPage} declarationContext={declarationContext} onDeclarationSoumise={onDeclarationSoumise} />}
                 {page === "avis" && <PageListeDesAvis setPage={setPage} />}
                 {page === "Paiements" && <ListePaiementsPage setPage={setPage} />}
                 {page === "AMR" && <PageListeDesAMRs setPage={setPage} />}
-                {page === "notifications" && <PageNotifications setPage={setPage} />}
+                {page === "notifications" && (
+                    <PageNotifications
+                        setPage={setPage}
+                        refreshKey={notifRefreshKey}
+                        onNotifRead={refreshNotifCount}
+                    />
+                )}
                 {page === "Profile" && <PageMonProfil setPage={setPage} />}
+                {page === "authentifier" && <PageAuthentifier setPage={setPage} />}
+                {page === "ajoutEtablissement" && <TabAjoutEtablissement setPage={setPage} />}
 
                 <Footer />
             </div>

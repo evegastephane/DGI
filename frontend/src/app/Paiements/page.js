@@ -7,10 +7,13 @@ import { ChevDown, ChevUp } from "../components/ui/Icons";
 
 // ─── Options filtres ──────────────────────────────────────────────────────
 const STATUT_OPTIONS = [
-    { value: "PENDING",  label: "PENDING"  },
-    { value: "PAID",     label: "PAID"     },
-    { value: "REJECTED", label: "REJECTED" },
-    { value: "PARTIAL",  label: "PARTIAL"  },
+    { value: "IN_PROGRESS", label: "INITIÉ"   },
+    { value: "SUCCESS",     label: "SUCCESS"  },
+    { value: "FAILED",      label: "FAILED"   },
+    { value: "PENDING",     label: "PENDING"  },
+    { value: "PAID",        label: "PAID"     },
+    { value: "REJECTED",    label: "REJECTED" },
+    { value: "PARTIAL",     label: "PARTIAL"  },
 ];
 
 const EXERCICE_OPTIONS = ["2025", "2024", "2023", "2022"];
@@ -109,13 +112,24 @@ function OutlinedInput({ label, value, onClear, onClick, open, children }) {
 
 // ─── Badge statut paiement ────────────────────────────────────────────────
 function Badge({ statut }) {
+    // Clés en minuscules ET en majuscules pour compatibilité backend/frontend
     const map = {
-        paye:       { label: "PAID",     bg: "#DCFCE7", color: "#16A34A" },
-        en_attente: { label: "PENDING",  bg: "#FEF3C7", color: "#D97706" },
-        partiel:    { label: "PARTIAL",  bg: "#DBEAFE", color: "#1D4ED8" },
-        rejete:     { label: "REJECTED", bg: "#FEE2E2", color: "#DC2626" },
+        // Nouveaux statuts paiement mobile
+        "IN_PROGRESS":   { label: "INITIÉ",   bg: "#FEF3C7", color: "#D97706" },
+        "SUCCESS":       { label: "SUCCESS",  bg: "#DCFCE7", color: "#16A34A" },
+        "FAILED":        { label: "FAILED",   bg: "#FEE2E2", color: "#DC2626" },
+        // Anciens statuts backend
+        "PAID":          { label: "PAID",     bg: "#DCFCE7", color: "#16A34A" },
+        "PENDING":       { label: "PENDING",  bg: "#FEF9C3", color: "#92400E" },
+        "REJECTED":      { label: "REJECTED", bg: "#FEE2E2", color: "#DC2626" },
+        "PARTIAL":       { label: "PARTIAL",  bg: "#DBEAFE", color: "#1D4ED8" },
+        // Formes FR (legacy)
+        "paye":          { label: "PAYÉ",     bg: "#DCFCE7", color: "#16A34A" },
+        "en_attente":    { label: "PENDING",  bg: "#FEF9C3", color: "#92400E" },
+        "partiel":       { label: "PARTIAL",  bg: "#DBEAFE", color: "#1D4ED8" },
+        "rejete":        { label: "REJECTED", bg: "#FEE2E2", color: "#DC2626" },
     };
-    const s = map[statut] ?? { label: statut?.toUpperCase(), bg: "#F3F4F6", color: "#6B7280" };
+    const s = map[statut] ?? { label: statut?.toUpperCase() ?? "—", bg: "#F3F4F6", color: "#6B7280" };
     return (
         <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 12, background: s.bg, color: s.color }}>
             {s.label}
@@ -328,13 +342,13 @@ export default function PageListeDesPaiements() {
 
                             {/* Exercice */}
                             <div ref={exerciceRef} style={{ flex: 1, minWidth: 200, position: "relative" }}>
-                                    <OutlinedInput
-                                        label="Exercice"
-                                        value={exerciceSaisi ? `EXERCICE ${exerciceSaisi}` : ""}
-                                        onClear={handleClearExercice}
-                                        onClick={() => setExerciceOpen(!exerciceOpen)}
-                                        open={exerciceOpen}
-                                    >
+                                <OutlinedInput
+                                    label="Exercice"
+                                    value={exerciceSaisi ? `EXERCICE ${exerciceSaisi}` : ""}
+                                    onClear={handleClearExercice}
+                                    onClick={() => setExerciceOpen(!exerciceOpen)}
+                                    open={exerciceOpen}
+                                >
 
                                     {exerciceOpen && (
                                         <div style={{
@@ -535,9 +549,11 @@ function LignePaiement({ paiement, visibleColumns, tdStyle }) {
                     ? `${Number(paiement[col.key]).toLocaleString("fr-FR")} FCFA`
                     : "—";
             case "payeLe":
-                return paiement.payeLe
-                    ? new Date(paiement.payeLe).toLocaleDateString("fr-FR")
-                    : "—";
+                if (!paiement.payeLe) return "—";
+                return new Date(paiement.payeLe).toLocaleString("fr-FR", {
+                    day: "2-digit", month: "2-digit", year: "numeric",
+                    hour: "2-digit", minute: "2-digit",
+                });
             default:
                 const valeur = paiement[col.key];
                 // Si c'est un nombre et que c'est NaN, on affiche un tiret

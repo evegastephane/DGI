@@ -4,10 +4,19 @@ const BASE = "/paiements";
 
 // ─── Mapping statut FR → EN ───────────────────────────────────────────────
 const STATUT_MAP = {
-    en_attente: "PENDING",
-    paye:       "PAID",
-    rejete:     "REJECTED",
-    partiel:    "PARTIAL",
+    // Formes FR (legacy)
+    en_attente:  "PENDING",
+    paye:        "PAID",
+    rejete:      "REJECTED",
+    partiel:     "PARTIAL",
+    // Nouvelles formes directes (déjà en majuscules, pass-through)
+    IN_PROGRESS: "IN_PROGRESS",
+    SUCCESS:     "SUCCESS",
+    FAILED:      "FAILED",
+    PAID:        "PAID",
+    PENDING:     "PENDING",
+    REJECTED:    "REJECTED",
+    PARTIAL:     "PARTIAL",
 };
 
 // ─── GET - Liste des paiements (avec filtres + tri) ───────────────────────
