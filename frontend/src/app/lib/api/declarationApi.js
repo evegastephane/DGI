@@ -32,6 +32,11 @@ export const creerDeclaration = (body) =>
 export const modifierDeclaration = (idDecl, body) =>
     api.put(`/declarations/${idDecl}`, body);
 
+
+// PUT /api/declarations/:id — soumettre un brouillon (DRAFT → SUBMITTED)
+export const soumettreDraft = (idDecl) =>
+    api.put(`/declarations/${idDecl}`, { statut: "SUBMITTED", idDeclaration: idDecl });
+
 // GET /api/declarations/:id/paiements
 export const getPaiementsDeclaration = (idDecl) =>
     api.get(`/declarations/${idDecl}/paiements`);
@@ -44,8 +49,17 @@ export const creerEtablissement = async (body) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            nom: body.nomEtablissement,
-            idContribuable: body.idContribuable,
+            nom:                        body.nomEtablissement,
+            idContribuable:             body.idContribuable,
+            typeActivites:              body.typeActivites              || null,
+            commune:                    body.commune                    || null,
+            adresse:                    body.localisation               || null,
+            montantMargeAdministree:    body.montantMargeAdministree    || 0,
+            caAutresActivites:          body.caAutresActivites          || 0,
+            caBoissonsAlcoolisees:      body.caBoissonsAlcoolisees      || 0,
+            caBoissonsNonAlcoolisees:   body.caBoissonsNonAlcoolisees   || 0,
+            caArmesEtMunitions:         body.caMU                      || 0,
+            caJeuxEtDivertissement:     body.caJeuxEtDivertissement     || 0,
         }),
     });
     if (!res.ok) {

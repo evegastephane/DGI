@@ -8,10 +8,24 @@ import {
     CURRENT_USER_ID,
 } from "../lib/api/contribuableApi";
 import { createPaiement } from "../lib/api/PaiementsApi";
+import { initialiserPaiement, pollStatutPaiement } from "../lib/api/harmonyPaiementApi";
 
 const EXERCICE_OPTIONS = ["2025", "2024", "2023", "2022"];
 
-// ─── Opérateurs mobiles (logos SVG fidèles aux screenshots) ─────────────────
+// ─── Mapping id opérateur → code Harmony 2 ────────────────────────────────
+// Codes acceptés par l'API : OM, MOMO, CAMPOST, OTP, EXPRESSUNION, UBA_M2U, YOOMEE, EXPRESSEXCHANGE
+const HARMONY_CODE = {
+    om:           "OM",
+    mtn:          "MOMO",
+    yoomee:       "YOOMEE",
+    otp:          "OTP",
+    uba:          "UBA_M2U",
+    campost:      "CAMPOST",
+    ecobank:      "EXPRESSEXCHANGE",
+    expressunion: "EXPRESSUNION",
+};
+
+// ─── Opérateurs mobiles ───────────────────────────────────────────────────
 const OPERATEURS_MOBILES = [
     {
         id: "mtn",
@@ -80,7 +94,7 @@ const OPERATEURS_MOBILES = [
     },
 ];
 
-// ─── Établissements financiers (logos SVG fidèles) ────────────────────────────
+// ─── Établissements financiers ────────────────────────────────────────────
 const ETABLISSEMENTS_FIN = [
     {
         id: "uba",
@@ -147,7 +161,7 @@ const ETABLISSEMENTS_FIN = [
     },
 ];
 
-// ─── Spinner animé orange (comme dans l'image) ────────────────────────────────
+// ─── Spinner animé orange ─────────────────────────────────────────────────
 function OrangeSpinner() {
     const [rotation, setRotation] = useState(0);
     useEffect(() => {
@@ -172,7 +186,7 @@ function OrangeSpinner() {
     );
 }
 
-// ─── Toast (notification verte en bas) ───────────────────────────────────────
+// ─── Toast (notification verte en bas) ───────────────────────────────────
 function Toast({ visible, message }) {
     if (!visible) return null;
     return (
@@ -188,12 +202,11 @@ function Toast({ visible, message }) {
                 <path d="M8 12l3 3 5-5"/>
             </svg>
             {message}
-            <button onClick={() => {}} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 16, marginLeft: 8 }}>×</button>
         </div>
     );
 }
 
-// ─── OutlinedInput ────────────────────────────────────────────────────────────
+// ─── OutlinedInput ────────────────────────────────────────────────────────
 function OutlinedInput({ label, value, onClear, onClick, open, children }) {
     const isFilled = value && value.length > 0;
     return (
@@ -235,16 +248,17 @@ function OutlinedInput({ label, value, onClear, onClick, open, children }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// PAGE PAIEMENT
+// PAGE PAIEMENT — même design que les screenshots, branché sur Harmony 2
 // ════════════════════════════════════════════════════════════════════════════
-function PagePaiement({ avis, onRetour }) {
+function PagePaiement({ avis, onRetour, contribuable }) {
     const [onglet,          setOnglet]          = useState("mobile");
     const [operateurId,     setOperateurId]     = useState("om");
     const [etablissementId, setEtablissementId] = useState("uba");
     const [telephone,       setTelephone]       = useState("+237 ");
     const [loading,         setLoading]         = useState(false);
-    const [statut,          setStatut]          = useState(null);
+    const [statut,          setStatut]          = useState(null); // null | "IN_PROGRESS" | "SUCCESS" | "FAILED"
     const [refPaiement,     setRefPaiement]     = useState("");
+    const [referencePanier, setReferencePanier] = useState("");
     const [toast,           setToast]           = useState(false);
     const [toastMsg,        setToastMsg]        = useState("");
 
@@ -254,38 +268,127 @@ function PagePaiement({ avis, onRetour }) {
     const fournisseur = liste.find(i => i.id === selId);
 
     const showToast = (msg) => {
-        setToastMsg(msg);
-        setToast(true);
+        setToastMsg(msg); setToast(true);
         setTimeout(() => setToast(false), 4000);
     };
 
     const handleConfirmer = async () => {
-        if (telephone.trim().length < 8) return;
+        const numNettoyé = telephone
+            .replace(/\+237/g, "")
+            .replace(/[\s\-\.]/g, "")
+            .trim();
+        if (numNettoyé.length < 8) return;
         setLoading(true);
+
+        const harmonyCode = HARMONY_CODE[selId] || "OM";
+        const niu = contribuable?.NIU || contribuable?.niu || avis?.niu || "";
+
         try {
-            const payload = {
+            const res = await initialiserPaiement({
+                niu,
+                montantAPayer:        Number(avis.montantBrut || avis.montantAPayer || 0),
+                codeOperateur:        harmonyCode,
+                numeroCompte:         numNettoyé,
                 referenceDeclaration: avis.reference,
-                anneeFiscale:         avis.annee,
-                structureFiscale:     avis.structure || "DGI",
-                montantAPayer:        avis.montantBrut,
-                montantPaye:          0,
-                statutPaiement:       "IN_PROGRESS",
-                operateur:            fournisseur?.label,
-                telephone,
-                payeLe:               new Date().toISOString(),
-            };
-            await createPaiement(payload).catch(() => null);
-            setRefPaiement(avis.reference);
+                libelleImpot:         avis.libelleImpot || `Droits d'enregistrement — ${avis.annee || new Date().getFullYear()}`,
+                typeDeclaration:      avis.typeDeclaration || "ACTE_NOTARIE",
+                libelleDeclaration:   `Paiement avis ${avis.reference}`,
+            });
+
+            // Extraire la référence panier (plusieurs noms possibles selon la version de l'API)
+            const refPanier =
+                res?.referencePanier     ||
+                res?.reference_panier    ||
+                res?.data?.referencePanier ||
+                res?.idPanier            ||
+                avis.reference;
+
+            setReferencePanier(refPanier);
+            setRefPaiement(refPanier);
+
+            // Enregistrement initial en BD (statut IN_PROGRESS)
+            let paiementId = null;
+            try {
+                const paiementCree = await createPaiement({
+                    referenceDeclaration: avis.reference,
+                    anneeFiscale:         avis.annee,
+                    structureFiscale:     avis.structure || "CDI YAOUNDE 1",
+                    montantAPayer:        Number(avis.montantBrut || avis.montantAPayer || 0),
+                    montantPaye:          0,
+                    statutPaiement:       "IN_PROGRESS",
+                    operateur:            fournisseur?.label,
+                    referencePaiement:    refPanier,
+                    telephone,
+                    payeLe:               null,
+                });
+                paiementId = paiementCree?.id;
+            } catch (dbErr) {
+                console.warn("[BD] Enregistrement paiement initial échoué:", dbErr.message);
+            }
+
             setStatut("IN_PROGRESS");
-            showToast("The payment was successfully initiated");
-        } catch {
+            showToast("Le paiement a été initié avec succès");
+
+            // Polling silencieux — met à jour la BD dès confirmation
+            pollStatutPaiement(refPanier, (detail) => {
+                const s = String(detail?.statut ?? "").toUpperCase();
+                const isSuccess = ["1", "SUCCESSFUL", "PAYÉ", "PAYE"].includes(s) || detail?.statut === 1;
+                const isFailed  = ["2", "FAILED", "ÉCHOUÉ", "ECHEC"].includes(s) || detail?.statut === 2;
+
+                if (isSuccess) {
+                    setStatut("SUCCESS");
+                    const refFinal = detail?.referencePaiement || refPanier;
+                    setRefPaiement(refFinal);
+                    // Mise à jour statut en BD
+                    if (paiementId) {
+                        import("../lib/api/PaiementsApi").then(({ updatePaiement }) =>
+                            updatePaiement(paiementId, {
+                                statutPaiement:    "SUCCESS",
+                                montantPaye:       Number(avis.montantBrut || avis.montantAPayer || 0),
+                                referencePaiement: refFinal,
+                                payeLe:            new Date().toISOString(),
+                            }).catch(() => null)
+                        );
+                    } else {
+                        // Pas d'ID connu → créer un nouveau enregistrement de succès
+                        import("../lib/api/PaiementsApi").then(({ createPaiement: cp }) =>
+                            cp({
+                                referenceDeclaration: avis.reference,
+                                anneeFiscale:         avis.annee,
+                                structureFiscale:     avis.structure || "CDI YAOUNDE 1",
+                                montantAPayer:        Number(avis.montantBrut || avis.montantAPayer || 0),
+                                montantPaye:          Number(avis.montantBrut || avis.montantAPayer || 0),
+                                statutPaiement:       "SUCCESS",
+                                operateur:            fournisseur?.label,
+                                referencePaiement:    refFinal,
+                                telephone,
+                                payeLe:               new Date().toISOString(),
+                            }).catch(() => null)
+                        );
+                    }
+                }
+                if (isFailed) {
+                    setStatut("FAILED");
+                    if (paiementId) {
+                        import("../lib/api/PaiementsApi").then(({ updatePaiement }) =>
+                            updatePaiement(paiementId, { statutPaiement: "FAILED" }).catch(() => null)
+                        );
+                    }
+                }
+            }, { intervalMs: 5_000, timeoutMs: 180_000 }).catch(() => null);
+
+        } catch (e) {
+            // Afficher le vrai message d'erreur Harmony 2 dans la console
+            console.error("[Harmony2] Erreur paiement:", e.message);
+            // Montrer l'erreur à l'utilisateur via le toast puis FAILED
+            showToast("Erreur : " + e.message);
             setStatut("FAILED");
         } finally {
             setLoading(false);
         }
     };
 
-    // ── Écrans de statut ──────────────────────────────────────────────────────
+    // ── Écrans de statut ──────────────────────────────────────────────────
     if (statut) {
         return (
             <main style={{ flex: 1, background: "#f3f4f6", display: "flex", flexDirection: "column" }}>
@@ -403,8 +506,9 @@ function PagePaiement({ avis, onRetour }) {
         );
     }
 
-    // ── Formulaire principal ──────────────────────────────────────────────────
-    const canConfirm = telephone.trim().length >= 9 && !loading;
+    // ── Formulaire principal ──────────────────────────────────────────────
+    const numNettoyé = telephone.replace(/\s/g, "").replace("+237", "");
+    const canConfirm  = numNettoyé.length >= 8 && !loading;
 
     return (
         <main style={{ flex: 1, background: "#f3f4f6", display: "flex", flexDirection: "column" }}>
@@ -426,8 +530,10 @@ function PagePaiement({ avis, onRetour }) {
                     padding: 4, marginBottom: 32, gap: 0,
                 }}>
                     {[
-                        { id: "mobile",    label: "Opérateurs Mobiles",        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg> },
-                        { id: "financier", label: "Établissements Financiers", icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> },
+                        { id: "mobile",    label: "Opérateurs Mobiles",
+                            icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg> },
+                        { id: "financier", label: "Établissements Financiers",
+                            icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> },
                     ].map(tab => (
                         <button key={tab.id} onClick={() => setOnglet(tab.id)} style={{
                             flex: 1, padding: "12px 10px", border: "none", borderRadius: 8,
@@ -484,7 +590,7 @@ function PagePaiement({ avis, onRetour }) {
                     Saisissez numéro de téléphone : <strong>{fournisseur?.label}</strong>
                 </p>
 
-                {/* ── Input téléphone pleine largeur ── */}
+                {/* ── Input téléphone ── */}
                 <input
                     value={telephone}
                     onChange={(e) => setTelephone(e.target.value)}
@@ -518,6 +624,7 @@ function PagePaiement({ avis, onRetour }) {
                         color: "#fff", border: "none", borderRadius: 6,
                         fontWeight: 700, fontSize: 14,
                         cursor: canConfirm ? "pointer" : "not-allowed",
+                        transition: "background 0.15s",
                     }}>
                         {loading ? "Traitement..." : "Confirmez le Paiement"}
                     </button>
@@ -588,9 +695,9 @@ function ActionMenu({ avis, onPayer }) {
                     borderRadius: 10, boxShadow: "0 8px 28px rgba(0,0,0,0.15)",
                     minWidth: 230, overflow: "hidden",
                 }}>
-                    {item(() => handleTelecharger("avis"),    "⬇", "Télécharger l'avis",   downloading)}
+                    {item(() => handleTelecharger("avis"),   "⬇", "Télécharger l'avis",   downloading)}
                     <div style={{ height: 1, background: "#F3F4F6" }} />
-                    {item(() => handleTelecharger("accuse"),  "📄", "Télécharger l'accusé", downloading)}
+                    {item(() => handleTelecharger("accuse"), "📄", "Télécharger l'accusé", downloading)}
                     <div style={{ height: 1, background: "#F3F4F6" }} />
                     {item(() => { setOpen(false); onPayer(avis); }, "💳", "Payer")}
                 </div>
@@ -613,10 +720,15 @@ export default function PageListeDesAvis() {
     const [rowsPerPage,      setRowsPerPage]      = useState(10);
     const [currentPage,      setCurrentPage]      = useState(1);
     const [avisAPayer,       setAvisAPayer]       = useState(null);
+    const [contribuable,     setContribuable]     = useState({});
     const exerciceRef = useRef(null);
 
     useEffect(() => {
         setLoading(true);
+        // Charger le contribuable pour le NIU (nécessaire pour Harmony 2)
+        import("../lib/api/contribuableApi").then(m => {
+            m.getContribuable(CURRENT_USER_ID).then(setContribuable).catch(() => {});
+        });
         getAvis({ id_contribuable: CURRENT_USER_ID })
             .then(d => { setTousLesAvis(d); setAvisFiltres(d); })
             .catch(e => setErreur(e.message))
@@ -629,7 +741,14 @@ export default function PageListeDesAvis() {
         return () => document.removeEventListener("mousedown", h);
     }, []);
 
-    if (avisAPayer) return <PagePaiement avis={avisAPayer} onRetour={() => setAvisAPayer(null)} />;
+    // Afficher la page de paiement en plein écran (comme dans les screenshots)
+    if (avisAPayer) return (
+        <PagePaiement
+            avis={avisAPayer}
+            contribuable={contribuable}
+            onRetour={() => setAvisAPayer(null)}
+        />
+    );
 
     const handleRechercher = () => {
         setAvisFiltres(exerciceSaisi.trim()

@@ -1,7 +1,9 @@
 package com.example.backend.controller;
 
 import com.example.backend.model.Contribuable;
+import com.example.backend.model.Etablissement;
 import com.example.backend.service.ContribuableService;
+import com.example.backend.repository.EtablissementRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,14 @@ public class ContribuableController {
     @Autowired
     private ContribuableService service;
 
+    @Autowired
+    private EtablissementRepository etablissementRepository;
+
+    @GetMapping("/{id}/etablissements")
+    public ResponseEntity<List<Etablissement>> getEtablissementsByContribuable(@PathVariable Long id) {
+        List<Etablissement> list = etablissementRepository.findByIdContribuable(id);
+        return ResponseEntity.ok(list);
+    }
     @GetMapping
     public List<Contribuable> getAll() {
         return service.findAll();

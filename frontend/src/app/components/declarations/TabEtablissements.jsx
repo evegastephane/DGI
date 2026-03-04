@@ -208,24 +208,46 @@ export default function TabEtablissements({
     const [saveErreur,    setSaveErreur]    = useState(null);
     const [estEnregistre, setEstEnregistre] = useState(false);
 
+    // Pré-charge les établissements au montage.
+    // Toutes les lignes sont immédiatement modifiables et une ligne vide
+    // est toujours présente à la fin pour pouvoir ajouter de nouveaux établissements.
     useEffect(() => {
         getEtablissements()
             .then((data) => {
                 if (data && data.length > 0) {
-                    // ── Reconduire les données déjà saisies si présentes ──────────
-                    if (lignes.length > 0 && lignes.some((l) => l.nom_etablissement !== "")) {
-                        // L'utilisateur a déjà des données → on ne remplace pas
-                        return;
-                    }
-                    // Sinon, pré-remplir depuis les établissements existants
-                    setLignes(data.map((e) => ({
-                        ...ligneVide(e.idEtablissement || Date.now()),
-                        nom_etablissement: e.nomEtablissement || "",
-                        commune:           e.commune?.nomCommune || e.commune?.nom_commune || "",
-                        localisation:      e.adresse || e.localisation || "",
-                        type_activites:    e.typeActivites || e.type_activites || "",
-                    })));
-                } else if (lignes.length === 0) {
+                    const lignesPrechargees = data.map((e, idx) => {
+                        const ca_autres      = e.caAutresActivites         != null ? String(e.caAutresActivites)         : "";
+                        const ca_boissons_na = e.caBoissonsNonAlcoolisees   != null ? String(e.caBoissonsNonAlcoolisees)  : "";
+                        const ca_boissons_a  = e.caBoissonsAlcoolisees       != null ? String(e.caBoissonsAlcoolisees)     : "";
+                        const ca_armes       = e.caArmesEtMunitions          != null ? String(e.caArmesEtMunitions)        : "";
+                        const ca_jeux        = e.caJeuxEtDivertissement       != null ? String(e.caJeuxEtDivertissement)   : "";
+                        const total = (parseFloat(ca_autres) || 0) + (parseFloat(ca_boissons_na) || 0) +
+                            (parseFloat(ca_boissons_a) || 0) + (parseFloat(ca_armes) || 0) +
+                            (parseFloat(ca_jeux) || 0);
+                        return {
+                            // ID stable : utilise l'idEtablissement réel, ou un index négatif unique
+                            id: e.idEtablissement ? `etab-${e.idEtablissement}` : `etab-idx-${idx}`,
+                            _nouveau: false,
+                            nom_etablissement:                   e.nom || e.nomEtablissement || "",
+                            type_activites:                      e.typeActivites || e.type_activites || "",
+                            commune:                             typeof e.commune === "string" ? e.commune : (e.commune?.nomCommune || e.commune?.nom_commune || ""),
+                            localisation:                        e.adresse || e.localisation || "",
+                            montant_marge_administree:           e.montantMargeAdministree != null ? String(e.montantMargeAdministree) : "",
+                            CA_autres_activites:                 ca_autres,
+                            CA_boissons_non_alcoolisees:         ca_boissons_na,
+                            CA_boissons_alcoolisees:             ca_boissons_a,
+                            CA_armes_et_munitions:               ca_armes,
+                            CA_jeux_de_hasard_et_divertissement: ca_jeux,
+                            Total_CA:                            total > 0 ? String(total) : "",
+                        };
+                    });
+                    // Ajouter deux lignes vides à la fin pour les nouveaux ajouts
+                    setLignes([
+                        ...lignesPrechargees,
+                        ligneVide(Date.now()),
+                        ligneVide(Date.now() + 1),
+                    ]);
+                } else {
                     setLignes([ligneVide(Date.now()), ligneVide(Date.now() + 1)]);
                 }
             })
@@ -297,15 +319,17 @@ export default function TabEtablissements({
             const updated = prev.map((l) => {
                 if (l.id !== id) return l;
                 const maj = { ...l, [champ]: valeur };
-                maj.Total_CA = calcTotalCA(maj) || "";
+                const total = calcTotalCA(maj);
+                maj.Total_CA = total > 0 ? String(total) : "";
                 return maj;
             });
-            const last  = updated[updated.length - 1];
-            const plein = COLONNES.filter((c) => !c.calcul).every((c) => {
-                const v = last[c.key];
-                return v !== undefined && v !== null && v.toString().trim() !== "";
-            });
-            if (last.id === id && plein) return [...updated, ligneVide(Date.now())];
+            const last = updated[updated.length - 1];
+            // Auto-ajout : dès qu'on commence à remplir la dernière ligne, ajouter une nouvelle ligne vide
+            const derniereModifiee = last.id === id;
+            const derniereLigneARemplissage = derniereModifiee && valeur.trim() !== "" && last.nom_etablissement.trim() !== "";
+            if (derniereLigneARemplissage) {
+                return [...updated, ligneVide(Date.now())];
+            }
             return updated;
         });
     };

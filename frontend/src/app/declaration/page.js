@@ -74,10 +74,11 @@ const ONGLETS = [
     { key: "recapitulatif",      label: "Recapitulatif"       },
 ];
 
-export function PageStep2({ setPage, declarationContext, onDeclarationSoumise }) {
+export function PageStep2({ setPage, declarationContext, onDeclarationSoumise, draftAEditer }) {
     const [ongletActif,   setOngletActif]   = useState("etablissements");
     const [lignes,        setLignes]        = useState([]);
-    const [idDeclaration, setIdDeclaration] = useState(null);
+    // Si on édite un draft existant, on initialise idDeclaration avec son id
+    const [idDeclaration, setIdDeclaration] = useState(draftAEditer?.id || null);
 
     return (
         <main style={{ padding: "24px 24px 40px", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
