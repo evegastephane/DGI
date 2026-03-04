@@ -31,6 +31,7 @@ export default function App() {
     const [page, setPage]   = useState("dashboard");
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [declarationContext, setDeclarationContext] = useState({});
+    const [draftAEditer, setDraftAEditer] = useState(null); // déclaration DRAFT en cours d'édition
     const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0);
 
     // ── Compteur de notifications non lues (badge cloche) ─────────────────
@@ -58,6 +59,13 @@ export default function App() {
     }, [refreshNotifCount]);
 
     // Appelé depuis TabRecapitulatif après soumission réussie → refresh dashboard + notifs
+    // Ouvrir l'édition d'un brouillon existant
+    const onModifierDraft = (decl) => {
+        setDraftAEditer(decl);
+        setDeclarationContext({ exercice: String(decl.annee || new Date().getFullYear()) });
+        setPage("step2");
+    };
+
     const onDeclarationSoumise = () => {
         setDashboardRefreshKey(k => k + 1);
         // Refresh badge + page notifications avec un léger délai pour laisser le backend créer la notif
@@ -65,6 +73,7 @@ export default function App() {
             refreshNotifCount();
             setNotifRefreshKey(k => k + 1);
         }, 800);
+        setDraftAEditer(null);
         setPage("dashboard");
     };
 
@@ -100,8 +109,8 @@ export default function App() {
                 {/* Rendu conditionnel de la page active */}
                 {page === "dashboard"   && <PageDashboard setPage={setPage} refreshKey={dashboardRefreshKey} />}
                 {page === "declaration" && <PageStep1 setPage={setPage} setDeclarationContext={setDeclarationContext} />}
-                {page === "mesDeclarations" && <MesDeclarations setPage={setPage} />}
-                {page === "step2"       && <PageStep2 setPage={setPage} declarationContext={declarationContext} onDeclarationSoumise={onDeclarationSoumise} />}
+                {page === "mesDeclarations" && <MesDeclarations setPage={setPage} onModifierDraft={onModifierDraft} />}
+                {page === "step2"       && <PageStep2 setPage={setPage} declarationContext={declarationContext} onDeclarationSoumise={onDeclarationSoumise} draftAEditer={draftAEditer} />}
                 {page === "avis" && <PageListeDesAvis setPage={setPage} />}
                 {page === "Paiements" && <ListePaiementsPage setPage={setPage} />}
                 {page === "AMR" && <PageListeDesAMRs setPage={setPage} />}

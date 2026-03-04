@@ -3,17 +3,40 @@
 import { useState, useEffect, useRef } from "react";
 import C from "../../lib/utils/colors";
 import { CURRENT_USER_ID } from "../../lib/api/contribuableApi";
-import { creerEtablissement } from "../../lib/api/declarationApi";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
-// Fetch direct car EtablissementController ne wrappe pas la réponse en {success, data}
 const fetchEtablissements = async () => {
-    const res = await fetch(`${BASE_URL}/etablissements`);
+    const res = await fetch(`${BASE_URL}/contribuables/${CURRENT_USER_ID}/etablissements`);
     if (!res.ok) throw new Error(`Erreur HTTP ${res.status}`);
-    const data = await res.json();
-    // Filtrer par contribuable courant si idContribuable disponible
-    return Array.isArray(data) ? data.filter(e => !e.idContribuable || e.idContribuable === CURRENT_USER_ID) : [];
+    const json = await res.json();
+    const data = json?.data ?? json;
+    return Array.isArray(data) ? data : [];
+};
+
+const apiCreer = async (body) => {
+    const res = await fetch(`${BASE_URL}/etablissements`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) { const t = await res.text().catch(() => ""); throw new Error(t || `Erreur HTTP ${res.status}`); }
+    return res.json();
+};
+
+const apiModifier = async (id, body) => {
+    const res = await fetch(`${BASE_URL}/etablissements/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) { const t = await res.text().catch(() => ""); throw new Error(t || `Erreur HTTP ${res.status}`); }
+    return res.json();
+};
+
+const apiSupprimer = async (id) => {
+    const res = await fetch(`${BASE_URL}/etablissements/${id}`, { method: "DELETE" });
+    if (!res.ok) { const t = await res.text().catch(() => ""); throw new Error(t || `Erreur HTTP ${res.status}`); }
 };
 
 // ─── Communes ──────────────────────────────────────────────────────────────
@@ -37,10 +60,12 @@ const VIDE = {
     margeAdministree: "",
     caAutresActivites: "",
     caBoissonsAlcoolisees: "",
-    caMU: "",
+    caBoissonsNonAlcoolisees: "",
+    caArmesEtMunitions: "",
+    caJeuxEtDivertissement: "",
 };
 
-// ─── Icônes SVG inline ─────────────────────────────────────────────────────
+// ─── Icônes ────────────────────────────────────────────────────────────────
 const IconBuilding = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
@@ -49,12 +74,6 @@ const IconBuilding = () => (
 const IconPlus = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-    </svg>
-);
-const IconEdit = () => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
     </svg>
 );
 const IconTrash = () => (
@@ -68,6 +87,12 @@ const IconCheck = () => (
         <polyline points="20 6 9 17 4 12"/>
     </svg>
 );
+const IconEdit2 = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
+);
 const IconChevron = ({ down }) => (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
          style={{ transform: down ? "none" : "rotate(180deg)", transition: "0.2s" }}>
@@ -75,7 +100,7 @@ const IconChevron = ({ down }) => (
     </svg>
 );
 
-// ─── Select commune avec recherche ─────────────────────────────────────────
+// ─── Select commune ─────────────────────────────────────────────────────────
 function CommuneSelect({ value, onChange }) {
     const [open, setOpen]     = useState(false);
     const [search, setSearch] = useState("");
@@ -87,24 +112,20 @@ function CommuneSelect({ value, onChange }) {
         return () => document.removeEventListener("mousedown", h);
     }, []);
 
-    const filtered = COMMUNES_CAMEROUN.filter((c) =>
-        c.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = COMMUNES_CAMEROUN.filter((c) => c.toLowerCase().includes(search.toLowerCase()));
 
     return (
         <div ref={ref} style={{ position: "relative" }}>
-            <div
-                onClick={() => { setOpen((o) => !o); setSearch(""); }}
-                style={{
-                    border: `1.5px solid ${open ? C.orange : "#E5E7EB"}`,
-                    borderRadius: 8, padding: "11px 14px",
-                    background: "#fff", cursor: "pointer",
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    fontSize: 14, color: value ? C.textDark : "#9CA3AF",
-                    transition: "border-color 0.15s",
-                    boxShadow: open ? `0 0 0 3px rgba(242,148,0,0.12)` : "none",
-                }}
-            >
+            <div onClick={() => { setOpen((o) => !o); setSearch(""); }}
+                 style={{
+                     border: `1.5px solid ${open ? C.orange : "#E5E7EB"}`,
+                     borderRadius: 8, padding: "11px 14px",
+                     background: "#fff", cursor: "pointer",
+                     display: "flex", justifyContent: "space-between", alignItems: "center",
+                     fontSize: 14, color: value ? C.textDark : "#9CA3AF",
+                     transition: "border-color 0.15s",
+                     boxShadow: open ? `0 0 0 3px rgba(242,148,0,0.12)` : "none",
+                 }}>
                 <span>{value || "Sélectionner une commune…"}</span>
                 <IconChevron down={open} />
             </div>
@@ -116,35 +137,27 @@ function CommuneSelect({ value, onChange }) {
                     maxHeight: 220, display: "flex", flexDirection: "column", overflow: "hidden",
                 }}>
                     <div style={{ padding: "10px 12px", borderBottom: `1px solid ${C.border}` }}>
-                        <input
-                            autoFocus
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            placeholder="Rechercher une commune…"
-                            style={{
-                                width: "100%", border: `1px solid ${C.border}`, borderRadius: 6,
-                                padding: "7px 10px", fontSize: 13, outline: "none",
-                                boxSizing: "border-box", background: "#F9FAFB",
-                            }}
-                        />
+                        <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
+                               onClick={(e) => e.stopPropagation()} placeholder="Rechercher une commune…"
+                               style={{
+                                   width: "100%", border: `1px solid ${C.border}`, borderRadius: 6,
+                                   padding: "7px 10px", fontSize: 13, outline: "none",
+                                   boxSizing: "border-box", background: "#F9FAFB",
+                               }} />
                     </div>
                     <div style={{ overflowY: "auto", flex: 1 }}>
                         {filtered.length === 0 ? (
                             <p style={{ padding: "12px 16px", color: "#9CA3AF", fontSize: 13, margin: 0 }}>Aucun résultat</p>
                         ) : filtered.map((c) => (
-                            <div
-                                key={c}
-                                onClick={() => { onChange(c); setOpen(false); }}
-                                style={{
-                                    padding: "10px 14px", fontSize: 14, cursor: "pointer",
-                                    background: value === c ? "#FEF3C7" : "transparent",
-                                    color: value === c ? C.orange : C.textDark,
-                                    fontWeight: value === c ? 600 : 400,
-                                }}
-                                onMouseEnter={(e) => { if (value !== c) e.currentTarget.style.background = "#F9FAFB"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = value === c ? "#FEF3C7" : "transparent"; }}
-                            >
+                            <div key={c} onClick={() => { onChange(c); setOpen(false); }}
+                                 style={{
+                                     padding: "10px 14px", fontSize: 14, cursor: "pointer",
+                                     background: value === c ? "#FEF3C7" : "transparent",
+                                     color: value === c ? C.orange : C.textDark,
+                                     fontWeight: value === c ? 600 : 400,
+                                 }}
+                                 onMouseEnter={(e) => { if (value !== c) e.currentTarget.style.background = "#F9FAFB"; }}
+                                 onMouseLeave={(e) => { e.currentTarget.style.background = value === c ? "#FEF3C7" : "transparent"; }}>
                                 {c}
                             </div>
                         ))}
@@ -156,7 +169,7 @@ function CommuneSelect({ value, onChange }) {
 }
 
 // ─── Champ label flottant ──────────────────────────────────────────────────
-function Champ({ label, value, onChange, type = "text", placeholder = "", icon }) {
+function Champ({ label, value, onChange, type = "text", placeholder = "" }) {
     const [focus, setFocus] = useState(false);
     const isNum = type === "number";
     const active = focus || !!value;
@@ -173,16 +186,14 @@ function Champ({ label, value, onChange, type = "text", placeholder = "", icon }
                 pointerEvents: "none", zIndex: 1,
                 transition: "all 0.15s",
                 fontWeight: active ? 500 : 400,
-            }}>
-                {label}
-            </label>
+            }}>{label}</label>
             <input
                 type={isNum ? "text" : type}
                 inputMode={isNum ? "decimal" : undefined}
                 value={value}
                 onChange={(e) => {
                     if (isNum) {
-                        const clean = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./, "$1");
+                        const clean = e.target.value.replace(/[^0-9.]/g, "").replace(/(\\..*)\\./, "$1");
                         onChange(clean);
                     } else {
                         onChange(e.target.value);
@@ -193,7 +204,7 @@ function Champ({ label, value, onChange, type = "text", placeholder = "", icon }
                 onBlur={() => setFocus(false)}
                 style={{
                     width: "100%", border: `1.5px solid ${focus ? C.orange : "#E5E7EB"}`,
-                    borderRadius: 8, padding: isNum ? "12px 14px 12px 14px" : "12px 14px",
+                    borderRadius: 8, padding: "12px 14px",
                     fontSize: 14, color: C.textDark, background: "#fff",
                     outline: "none", boxSizing: "border-box",
                     transition: "border-color 0.15s, box-shadow 0.15s",
@@ -213,36 +224,59 @@ function Champ({ label, value, onChange, type = "text", placeholder = "", icon }
 
 // ─── Composant principal ───────────────────────────────────────────────────
 export default function TabAjoutEtablissement({ declarationContext }) {
-    const [etablissements,  setEtablissements]  = useState([]);
-    const [selectionne,     setSelectionne]     = useState(null);
-    const [form,            setForm]            = useState(VIDE);
-    const [loading,         setLoading]         = useState(true);
-    const [saving,          setSaving]          = useState(false);
-    const [succes,          setSucces]          = useState(false);
-    const [erreur,          setErreur]          = useState(null);
+    const [etablissements, setEtablissements] = useState([]);
+    const [selectionne,    setSelectionne]    = useState(null); // index ou null
+    const [form,           setForm]           = useState(VIDE);
+    const [loading,        setLoading]        = useState(true);
+    const [saving,         setSaving]         = useState(false);
+    const [succes,         setSucces]         = useState(false);
+    const [succesMsg,      setSuccesMsg]      = useState("");
+    const [erreur,         setErreur]         = useState(null);
+    const [supprimant,     setSupprimant]     = useState(false);
 
-    useEffect(() => {
+    const charger = () =>
         fetchEtablissements()
             .then((data) => setEtablissements(Array.isArray(data) ? data : []))
-            .catch(() => setEtablissements([]))
-            .finally(() => setLoading(false));
-    }, []);
+            .catch(() => setEtablissements([]));
+
+    useEffect(() => {
+        charger().finally(() => setLoading(false));
+    }, []); // eslint-disable-line
 
     const setChamp = (key) => (val) => setForm((f) => ({ ...f, [key]: val }));
 
+    // Mapper un objet établissement backend → état du formulaire
+    const mapVersForm = (e) => ({
+        nomEtablissement:         e.nom || e.nomEtablissement || "",
+        typeActivites:            e.typeActivites    || "",
+        commune:                  e.commune?.nomCommune || e.commune?.nom_commune || (typeof e.commune === "string" ? e.commune : "") || "",
+        localisation:             e.adresse          || e.localisation || "",
+        margeAdministree:         e.montantMargeAdministree    != null ? String(e.montantMargeAdministree)    : "",
+        caAutresActivites:        e.caAutresActivites          != null ? String(e.caAutresActivites)          : "",
+        caBoissonsAlcoolisees:    e.caBoissonsAlcoolisees       != null ? String(e.caBoissonsAlcoolisees)      : "",
+        caBoissonsNonAlcoolisees: e.caBoissonsNonAlcoolisees    != null ? String(e.caBoissonsNonAlcoolisees)   : "",
+        caArmesEtMunitions:       e.caArmesEtMunitions          != null ? String(e.caArmesEtMunitions)         : "",
+        caJeuxEtDivertissement:   e.caJeuxEtDivertissement      != null ? String(e.caJeuxEtDivertissement)     : "",
+    });
+
+    // Mapper le formulaire → payload API
+    const mapVersApi = (f, idContribuable) => ({
+        nom:                         f.nomEtablissement,
+        idContribuable:              idContribuable,
+        typeActivites:               f.typeActivites               || null,
+        commune:                     f.commune                     || null,
+        adresse:                     f.localisation                || null,
+        montantMargeAdministree:     parseFloat(f.margeAdministree)         || 0,
+        caAutresActivites:           parseFloat(f.caAutresActivites)        || 0,
+        caBoissonsAlcoolisees:       parseFloat(f.caBoissonsAlcoolisees)    || 0,
+        caBoissonsNonAlcoolisees:    parseFloat(f.caBoissonsNonAlcoolisees) || 0,
+        caArmesEtMunitions:          parseFloat(f.caArmesEtMunitions)       || 0,
+        caJeuxEtDivertissement:      parseFloat(f.caJeuxEtDivertissement)   || 0,
+    });
+
     const handleSelectionner = (idx) => {
         setSelectionne(idx);
-        const e = etablissements[idx];
-        setForm({
-            nomEtablissement:      e.nom || e.nomEtablissement || e.nom_etablissement || "",
-            typeActivites:         e.typeActivites    || e.type_activites    || "",
-            commune:               e.commune?.nomCommune || e.commune?.nom_commune || e.commune || "",
-            localisation:          e.adresse          || e.localisation      || "",
-            margeAdministree:      String(e.montantMargeAdministree || e.montant_marge_administree || ""),
-            caAutresActivites:     String(e.caAutresActivites       || e.CA_autres_activites      || ""),
-            caBoissonsAlcoolisees: String(e.caBoissonsAlcoolisees   || e.CA_boissons_alcoolisees  || ""),
-            caMU:                  String(e.caMU                    || e.CA_armes_et_munitions    || ""),
-        });
+        setForm(mapVersForm(etablissements[idx]));
         setSucces(false); setErreur(null);
     };
 
@@ -250,34 +284,60 @@ export default function TabAjoutEtablissement({ declarationContext }) {
         setSelectionne(null); setForm(VIDE); setSucces(false); setErreur(null);
     };
 
+    // ── Créer ──────────────────────────────────────────────────────────────
     const handleEnregistrer = async () => {
         if (!form.nomEtablissement.trim()) { setErreur("Le nom de l'établissement est obligatoire."); return; }
         setSaving(true); setErreur(null); setSucces(false);
         try {
-            await creerEtablissement({
-                idContribuable:          CURRENT_USER_ID,
-                nomEtablissement:        form.nomEtablissement,
-                typeActivites:           form.typeActivites,
-                commune:                 form.commune,
-                localisation:            form.localisation,
-                montantMargeAdministree: parseFloat(form.margeAdministree)     || 0,
-                caAutresActivites:       parseFloat(form.caAutresActivites)    || 0,
-                caBoissonsAlcoolisees:   parseFloat(form.caBoissonsAlcoolisees)|| 0,
-                caMU:                    parseFloat(form.caMU)                 || 0,
-            });
-            const data = await fetchEtablissements();
-            setEtablissements(Array.isArray(data) ? data : []);
+            await apiCreer(mapVersApi(form, CURRENT_USER_ID));
+            await charger();
+            setSuccesMsg("Établissement créé avec succès !");
             setSucces(true); setSelectionne(null); setForm(VIDE);
         } catch (e) {
             setErreur(e.message || "Erreur lors de l'enregistrement.");
         } finally { setSaving(false); }
     };
 
-    const handleSupprimer = () => { setSelectionne(null); setForm(VIDE); };
+    // ── Modifier ───────────────────────────────────────────────────────────
+    const handleModifier = async () => {
+        if (!form.nomEtablissement.trim()) { setErreur("Le nom de l'établissement est obligatoire."); return; }
+        const id = etablissements[selectionne]?.idEtablissement;
+        if (!id) { setErreur("Impossible de trouver l'identifiant de cet établissement."); return; }
+        setSaving(true); setErreur(null); setSucces(false);
+        try {
+            await apiModifier(id, { ...mapVersApi(form, CURRENT_USER_ID), idEtablissement: id });
+            await charger();
+            setSuccesMsg("Informations mises à jour avec succès !");
+            setSucces(true);
+        } catch (e) {
+            setErreur(e.message || "Erreur lors de la modification.");
+        } finally { setSaving(false); }
+    };
 
-    const totalCA  = [parseFloat(form.caAutresActivites)||0, parseFloat(form.caBoissonsAlcoolisees)||0, parseFloat(form.caMU)||0].reduce((a,b)=>a+b,0);
+    // ── Supprimer ──────────────────────────────────────────────────────────
+    const handleSupprimer = async (e2) => {
+        e2.stopPropagation();
+        const id = etablissements[selectionne]?.idEtablissement;
+        if (!id) return;
+        if (!window.confirm(`Supprimer « ${etablissements[selectionne]?.nom || form.nomEtablissement} » ? Cette action est irréversible.`)) return;
+        setSupprimant(true); setErreur(null);
+        try {
+            await apiSupprimer(id);
+            await charger();
+            setSelectionne(null); setForm(VIDE);
+        } catch (e) {
+            setErreur(e.message || "Erreur lors de la suppression.");
+        } finally { setSupprimant(false); }
+    };
+
+    const totalCA = [
+        parseFloat(form.caAutresActivites)        || 0,
+        parseFloat(form.caBoissonsAlcoolisees)     || 0,
+        parseFloat(form.caBoissonsNonAlcoolisees)  || 0,
+        parseFloat(form.caArmesEtMunitions)        || 0,
+        parseFloat(form.caJeuxEtDivertissement)    || 0,
+    ].reduce((a, b) => a + b, 0);
     const margeVal = parseFloat(form.margeAdministree) || 0;
-
     const fmt = (n) => n > 0 ? n.toLocaleString("fr-FR") + " FCFA" : "—";
 
     if (loading) return (
@@ -289,15 +349,20 @@ export default function TabAjoutEtablissement({ declarationContext }) {
         </div>
     );
 
+    const modeEdition = selectionne !== null;
+    const nomActuel = modeEdition
+        ? (etablissements[selectionne]?.nom || etablissements[selectionne]?.nomEtablissement || `Établissement ${selectionne + 1}`)
+        : "Nouvel établissement";
+
     return (
         <div style={{ background: "#F3F4F6", minHeight: "100vh", paddingBottom: 100 }}>
 
-            {/* ── En-tête de page ── */}
+            {/* ── En-tête ── */}
             <div style={{ background: "#fff", padding: "20px 32px", borderBottom: "1px solid #E5E7EB", marginBottom: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
                     <span style={{ fontSize: 13, color: "#9CA3AF" }}>Déclaration Patente</span>
                     <span style={{ color: "#D1D5DB" }}>›</span>
-                    <span style={{ fontSize: 13, color: C.orange, fontWeight: 600 }}>Ajouter Établissement</span>
+                    <span style={{ fontSize: 13, color: C.orange, fontWeight: 600 }}>Gestion des Établissements</span>
                 </div>
                 <h1 style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: 0 }}>
                     Gestion des Établissements
@@ -306,28 +371,23 @@ export default function TabAjoutEtablissement({ declarationContext }) {
 
             <div style={{ display: "flex", gap: 24, padding: "0 32px", alignItems: "flex-start" }}>
 
-                {/* ══ COLONNE GAUCHE : Liste ══ */}
+                {/* ══ COLONNE GAUCHE ══ */}
                 <div style={{ width: 280, flexShrink: 0 }}>
 
-                    {/* Bouton Nouveau */}
-                    <button
-                        onClick={handleNouvel}
-                        style={{
-                            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                            width: "100%", padding: "13px 16px",
-                            background: C.orange, color: "#fff",
-                            border: "none", borderRadius: 10, fontWeight: 700, fontSize: 14,
-                            cursor: "pointer", marginBottom: 16,
-                            boxShadow: "0 4px 12px rgba(242,148,0,0.35)",
-                            transition: "all 0.15s",
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = "#D97706"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = C.orange; e.currentTarget.style.transform = "none"; }}
-                    >
+                    <button onClick={handleNouvel} style={{
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        width: "100%", padding: "13px 16px",
+                        background: C.orange, color: "#fff",
+                        border: "none", borderRadius: 10, fontWeight: 700, fontSize: 14,
+                        cursor: "pointer", marginBottom: 16,
+                        boxShadow: "0 4px 12px rgba(242,148,0,0.35)",
+                        transition: "all 0.15s",
+                    }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = "#D97706"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = C.orange; e.currentTarget.style.transform = "none"; }}>
                         <IconPlus /> Nouvel Établissement
                     </button>
 
-                    {/* Card liste */}
                     <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                         <div style={{ padding: "14px 16px", borderBottom: "1px solid #F3F4F6", background: "#FAFAFA" }}>
                             <h3 style={{ fontSize: 13, fontWeight: 600, color: "#6B7280", margin: 0, textTransform: "uppercase", letterSpacing: 0.5 }}>
@@ -343,23 +403,22 @@ export default function TabAjoutEtablissement({ declarationContext }) {
                             </div>
                         ) : (
                             etablissements.map((e, idx) => {
-                                const nom   = e.nom || e.nomEtablissement || e.nom_etablissement || `Établissement ${idx + 1}`;
+                                const nom  = e.nom || e.nomEtablissement || `Établissement ${idx + 1}`;
                                 const actif = selectionne === idx;
+                                const communeAff = typeof e.commune === "string" ? e.commune : e.commune?.nomCommune || "";
                                 return (
-                                    <div
-                                        key={e.idEtablissement || idx}
-                                        onClick={() => handleSelectionner(idx)}
-                                        style={{
-                                            display: "flex", alignItems: "center", justifyContent: "space-between",
-                                            padding: "13px 16px", cursor: "pointer",
-                                            borderLeft: actif ? `3px solid ${C.orange}` : "3px solid transparent",
-                                            background: actif ? "#FEF9EC" : "#fff",
-                                            borderBottom: "1px solid #F3F4F6",
-                                            transition: "all 0.15s",
-                                        }}
-                                        onMouseEnter={(e2) => { if (!actif) e2.currentTarget.style.background = "#FAFAFA"; }}
-                                        onMouseLeave={(e2) => { e2.currentTarget.style.background = actif ? "#FEF9EC" : "#fff"; }}
-                                    >
+                                    <div key={e.idEtablissement || idx}
+                                         onClick={() => handleSelectionner(idx)}
+                                         style={{
+                                             display: "flex", alignItems: "center", justifyContent: "space-between",
+                                             padding: "13px 16px", cursor: "pointer",
+                                             borderLeft: actif ? `3px solid ${C.orange}` : "3px solid transparent",
+                                             background: actif ? "#FEF9EC" : "#fff",
+                                             borderBottom: "1px solid #F3F4F6",
+                                             transition: "all 0.15s",
+                                         }}
+                                         onMouseEnter={(e2) => { if (!actif) e2.currentTarget.style.background = "#FAFAFA"; }}
+                                         onMouseLeave={(e2) => { e2.currentTarget.style.background = actif ? "#FEF9EC" : "#fff"; }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
                                             <div style={{
                                                 width: 34, height: 34, borderRadius: 8, flexShrink: 0,
@@ -373,25 +432,29 @@ export default function TabAjoutEtablissement({ declarationContext }) {
                                                 <p style={{ fontSize: 13, fontWeight: actif ? 700 : 500, color: actif ? C.orange : "#111827", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                                     {nom}
                                                 </p>
-                                                {e.commune && (
-                                                    <p style={{ fontSize: 11, color: "#9CA3AF", margin: "2px 0 0" }}>
-                                                        {e.commune?.nomCommune || e.commune}
-                                                    </p>
+                                                {communeAff && (
+                                                    <p style={{ fontSize: 11, color: "#9CA3AF", margin: "2px 0 0" }}>{communeAff}</p>
                                                 )}
                                             </div>
                                         </div>
+                                        {/* Seulement le bouton supprimer dans la liste */}
                                         {actif && (
-                                            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                                                <button style={{ background: "#FEF3C7", color: C.orange, border: "none", borderRadius: 6, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                    <IconEdit />
-                                                </button>
-                                                <button
-                                                    onClick={(e2) => { e2.stopPropagation(); handleSupprimer(); }}
-                                                    style={{ background: "#FEE2E2", color: "#EF4444", border: "none", borderRadius: 6, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                >
-                                                    <IconTrash />
-                                                </button>
-                                            </div>
+                                            <button
+                                                onClick={handleSupprimer}
+                                                disabled={supprimant}
+                                                title="Supprimer cet établissement"
+                                                style={{
+                                                    background: "#FEE2E2", color: "#EF4444",
+                                                    border: "none", borderRadius: 6,
+                                                    width: 28, height: 28, flexShrink: 0,
+                                                    cursor: supprimant ? "not-allowed" : "pointer",
+                                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                                    opacity: supprimant ? 0.5 : 1,
+                                                }}
+                                                onMouseEnter={(e2) => { e2.currentTarget.style.background = "#EF4444"; e2.currentTarget.style.color = "#fff"; }}
+                                                onMouseLeave={(e2) => { e2.currentTarget.style.background = "#FEE2E2"; e2.currentTarget.style.color = "#EF4444"; }}>
+                                                {supprimant ? "…" : <IconTrash />}
+                                            </button>
                                         )}
                                     </div>
                                 );
@@ -405,18 +468,14 @@ export default function TabAjoutEtablissement({ declarationContext }) {
                     <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden" }}>
 
                         {/* En-tête formulaire */}
-                        <div style={{ padding: "18px 24px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 12, background: "#FAFAFA" }}>
+                        <div style={{ padding: "18px 24px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 12, background: modeEdition ? "#FEF9EC" : "#FAFAFA" }}>
                             <div style={{ width: 38, height: 38, borderRadius: 10, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", color: C.orange }}>
-                                <IconBuilding />
+                                {modeEdition ? <IconEdit2 /> : <IconBuilding />}
                             </div>
                             <div>
-                                <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>
-                                    {selectionne !== null
-                                        ? (etablissements[selectionne]?.nomEtablissement || `Établissement ${selectionne + 1}`)
-                                        : "Nouvel établissement"}
-                                </h2>
+                                <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>{nomActuel}</h2>
                                 <p style={{ fontSize: 12, color: "#9CA3AF", margin: 0 }}>
-                                    {selectionne !== null ? "Modifier les informations" : "Remplissez les informations ci-dessous"}
+                                    {modeEdition ? "Modifiez les informations puis cliquez sur « Modifier les informations »" : "Remplissez les informations ci-dessous"}
                                 </p>
                             </div>
                         </div>
@@ -425,60 +484,41 @@ export default function TabAjoutEtablissement({ declarationContext }) {
 
                             {/* ── Section 1 : Informations générales ── */}
                             <div style={{ marginBottom: 28 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
-                                    <div style={{ height: 1, flex: 1, background: "#F3F4F6" }} />
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: 1, whiteSpace: "nowrap" }}>
-                                        Informations générales
-                                    </span>
-                                    <div style={{ height: 1, flex: 1, background: "#F3F4F6" }} />
-                                </div>
-
+                                <SectionTitre label="Informations générales" />
                                 <Champ label="Nom de l'établissement *" value={form.nomEtablissement} onChange={setChamp("nomEtablissement")} />
-
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
                                     <Champ label="Type d'activités" value={form.typeActivites} onChange={setChamp("typeActivites")} />
                                     <div style={{ marginBottom: 20 }}>
-                                        <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#6B7280", marginBottom: 6 }}>
-                                            Commune
-                                        </label>
+                                        <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#6B7280", marginBottom: 6 }}>Commune</label>
                                         <CommuneSelect value={form.commune} onChange={setChamp("commune")} />
                                     </div>
                                 </div>
-
                                 <Champ label="Localisation / Adresse" value={form.localisation} onChange={setChamp("localisation")} />
                             </div>
 
                             {/* ── Section 2 : Données financières ── */}
                             <div style={{ marginBottom: 24 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
-                                    <div style={{ height: 1, flex: 1, background: "#F3F4F6" }} />
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: 1, whiteSpace: "nowrap" }}>
-                                        Données financières
-                                    </span>
-                                    <div style={{ height: 1, flex: 1, background: "#F3F4F6" }} />
-                                </div>
+                                <SectionTitre label="Données financières" />
 
                                 {/* Mini totaux */}
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
                                     <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "14px 16px" }}>
                                         <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 4px", fontWeight: 500, textTransform: "uppercase", letterSpacing: 0.5 }}>Total CA</p>
-                                        <p style={{ fontSize: 18, fontWeight: 700, color: totalCA > 0 ? C.orange : "#D1D5DB", margin: 0 }}>
-                                            {fmt(totalCA)}
-                                        </p>
+                                        <p style={{ fontSize: 18, fontWeight: 700, color: totalCA > 0 ? C.orange : "#D1D5DB", margin: 0 }}>{fmt(totalCA)}</p>
                                     </div>
                                     <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "14px 16px" }}>
                                         <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 4px", fontWeight: 500, textTransform: "uppercase", letterSpacing: 0.5 }}>Marge administrée</p>
-                                        <p style={{ fontSize: 18, fontWeight: 700, color: margeVal > 0 ? C.orange : "#D1D5DB", margin: 0 }}>
-                                            {fmt(margeVal)}
-                                        </p>
+                                        <p style={{ fontSize: 18, fontWeight: 700, color: margeVal > 0 ? C.orange : "#D1D5DB", margin: 0 }}>{fmt(margeVal)}</p>
                                     </div>
                                 </div>
 
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
-                                    <Champ label="Marge administrée" value={form.margeAdministree} onChange={setChamp("margeAdministree")} type="number" />
-                                    <Champ label="CA autres activités" value={form.caAutresActivites} onChange={setChamp("caAutresActivites")} type="number" />
-                                    <Champ label="CA Boissons alcoolisées" value={form.caBoissonsAlcoolisees} onChange={setChamp("caBoissonsAlcoolisees")} type="number" />
-                                    <Champ label="CA Armes & Munitions" value={form.caMU} onChange={setChamp("caMU")} type="number" />
+                                    <Champ label="Marge administrée"           value={form.margeAdministree}         onChange={setChamp("margeAdministree")}         type="number" />
+                                    <Champ label="CA autres activités"         value={form.caAutresActivites}         onChange={setChamp("caAutresActivites")}         type="number" />
+                                    <Champ label="CA Boissons alcoolisées"      value={form.caBoissonsAlcoolisees}     onChange={setChamp("caBoissonsAlcoolisees")}     type="number" />
+                                    <Champ label="CA Boissons non alcoolisées"  value={form.caBoissonsNonAlcoolisees}  onChange={setChamp("caBoissonsNonAlcoolisees")}  type="number" />
+                                    <Champ label="CA Armes & Munitions"         value={form.caArmesEtMunitions}        onChange={setChamp("caArmesEtMunitions")}        type="number" />
+                                    <Champ label="CA Jeux & Divertissement"     value={form.caJeuxEtDivertissement}    onChange={setChamp("caJeuxEtDivertissement")}    type="number" />
                                 </div>
                             </div>
 
@@ -486,7 +526,7 @@ export default function TabAjoutEtablissement({ declarationContext }) {
                             {succes && (
                                 <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "#F0FDF4", border: "1px solid #86EFAC", borderRadius: 8, marginBottom: 16 }}>
                                     <span style={{ color: "#16A34A", display: "flex" }}><IconCheck /></span>
-                                    <span style={{ fontSize: 14, color: "#15803D", fontWeight: 600 }}>Établissement enregistré avec succès !</span>
+                                    <span style={{ fontSize: 14, color: "#15803D", fontWeight: 600 }}>{succesMsg}</span>
                                 </div>
                             )}
                             {erreur && (
@@ -498,39 +538,19 @@ export default function TabAjoutEtablissement({ declarationContext }) {
 
                             {/* ── Boutons actions ── */}
                             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                                {selectionne !== null && (
-                                    <button
-                                        onClick={handleSupprimer}
-                                        style={{
-                                            display: "flex", alignItems: "center", gap: 8,
-                                            background: "#fff", color: "#EF4444",
-                                            border: "1.5px solid #FECACA", borderRadius: 8,
-                                            padding: "11px 20px", fontWeight: 600, fontSize: 14,
-                                            cursor: "pointer", transition: "all 0.15s",
-                                        }}
-                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.borderColor = "#EF4444"; }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#FECACA"; }}
-                                    >
-                                        <IconTrash /> Supprimer
-                                    </button>
-                                )}
-                                <button
-                                    onClick={handleNouvel}
-                                    style={{
-                                        background: "#fff", color: "#374151",
-                                        border: "1.5px solid #E5E7EB", borderRadius: 8,
-                                        padding: "11px 20px", fontWeight: 600, fontSize: 14,
-                                        cursor: "pointer", transition: "all 0.15s",
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = "#F9FAFB"}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = "#fff"}
-                                >
+                                <button onClick={handleNouvel} style={{
+                                    background: "#fff", color: "#374151",
+                                    border: "1.5px solid #E5E7EB", borderRadius: 8,
+                                    padding: "11px 20px", fontWeight: 600, fontSize: 14,
+                                    cursor: "pointer", transition: "all 0.15s",
+                                }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = "#F9FAFB"}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = "#fff"}>
                                     Annuler
                                 </button>
-                                <button
-                                    onClick={handleEnregistrer}
-                                    disabled={saving}
-                                    style={{
+
+                                {modeEdition ? (
+                                    <button onClick={handleModifier} disabled={saving} style={{
                                         display: "flex", alignItems: "center", gap: 8,
                                         background: saving ? "#F5C77E" : C.orange, color: "#fff",
                                         border: "none", borderRadius: 8,
@@ -539,16 +559,41 @@ export default function TabAjoutEtablissement({ declarationContext }) {
                                         boxShadow: saving ? "none" : "0 4px 12px rgba(242,148,0,0.3)",
                                         transition: "all 0.15s",
                                     }}
-                                    onMouseEnter={(e) => { if (!saving) { e.currentTarget.style.background = "#D97706"; e.currentTarget.style.transform = "translateY(-1px)"; }}}
-                                    onMouseLeave={(e) => { if (!saving) { e.currentTarget.style.background = C.orange; e.currentTarget.style.transform = "none"; }}}
-                                >
-                                    {saving ? "Enregistrement…" : (<><IconCheck /> Enregistrer</>)}
-                                </button>
+                                            onMouseEnter={(e) => { if (!saving) { e.currentTarget.style.background = "#D97706"; e.currentTarget.style.transform = "translateY(-1px)"; }}}
+                                            onMouseLeave={(e) => { if (!saving) { e.currentTarget.style.background = C.orange; e.currentTarget.style.transform = "none"; }}}>
+                                        {saving ? "Modification…" : (<><IconEdit2 /> Modifier les informations</>)}
+                                    </button>
+                                ) : (
+                                    <button onClick={handleEnregistrer} disabled={saving} style={{
+                                        display: "flex", alignItems: "center", gap: 8,
+                                        background: saving ? "#F5C77E" : C.orange, color: "#fff",
+                                        border: "none", borderRadius: 8,
+                                        padding: "11px 28px", fontWeight: 700, fontSize: 14,
+                                        cursor: saving ? "not-allowed" : "pointer",
+                                        boxShadow: saving ? "none" : "0 4px 12px rgba(242,148,0,0.3)",
+                                        transition: "all 0.15s",
+                                    }}
+                                            onMouseEnter={(e) => { if (!saving) { e.currentTarget.style.background = "#D97706"; e.currentTarget.style.transform = "translateY(-1px)"; }}}
+                                            onMouseLeave={(e) => { if (!saving) { e.currentTarget.style.background = C.orange; e.currentTarget.style.transform = "none"; }}}>
+                                        {saving ? "Enregistrement…" : (<><IconCheck /> Enregistrer</>)}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+// ─── Petit composant séparateur de section ─────────────────────────────────
+function SectionTitre({ label }) {
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+            <div style={{ height: 1, flex: 1, background: "#F3F4F6" }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: 1, whiteSpace: "nowrap" }}>{label}</span>
+            <div style={{ height: 1, flex: 1, background: "#F3F4F6" }} />
         </div>
     );
 }
