@@ -343,7 +343,7 @@ export default function TabAjoutEtablissement({ declarationContext }) {
     if (loading) return (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300 }}>
             <div style={{ textAlign: "center", color: "#9CA3AF" }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>...</div>
                 <p style={{ fontSize: 14 }}>Chargement des établissements…</p>
             </div>
         </div>
@@ -397,7 +397,7 @@ export default function TabAjoutEtablissement({ declarationContext }) {
 
                         {etablissements.length === 0 ? (
                             <div style={{ padding: "40px 20px", textAlign: "center" }}>
-                                <div style={{ fontSize: 36, marginBottom: 10 }}>🏢</div>
+                                <div style={{ fontSize: 36, marginBottom: 10 }}></div>
                                 <p style={{ fontSize: 13, color: "#9CA3AF", margin: 0 }}>Aucun établissement enregistré</p>
                                 <p style={{ fontSize: 12, color: "#D1D5DB", marginTop: 4 }}>Cliquez sur « Nouvel Établissement »</p>
                             </div>
@@ -531,7 +531,7 @@ export default function TabAjoutEtablissement({ declarationContext }) {
                             )}
                             {erreur && (
                                 <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, marginBottom: 16 }}>
-                                    <span style={{ fontSize: 16 }}>⚠</span>
+                                    <span style={{ fontSize: 16 }}>[!]</span>
                                     <span style={{ fontSize: 14, color: "#DC2626" }}>{erreur}</span>
                                 </div>
                             )}

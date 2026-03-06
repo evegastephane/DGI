@@ -126,7 +126,6 @@ export default function App() {
                 {page === "ajoutEtablissement" && <TabAjoutEtablissement setPage={setPage} />}
 
                 <Footer />
-                <Footer />
             </div>
         </div>
     );

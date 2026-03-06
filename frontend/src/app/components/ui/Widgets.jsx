@@ -69,7 +69,7 @@ export function VoirPlus() {
 // ═══════════════════════════════════════════
 // RecapCell.jsx
 // Input cellule du tableau Récapitulatif
-// readOnly=true → colonne "Total" calculée auto
+// readOnly=true -> colonne "Total" calculée auto
 // ═══════════════════════════════════════════
 export function RecapCell({ value, onChange, readOnly = false }) {
     return (
@@ -147,7 +147,7 @@ export function Spinner() {
 export function ErrorMsg({ message }) {
     return (
         <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 8, padding: "14px 18px", color: "#b91c1c", fontSize: 13, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 18 }}>⚠</span>
+            <span style={{ fontSize: 18 }}>[!]</span>
             <span>{message || "Une erreur est survenue. Vérifiez que le backend est démarré sur le port 3001."}</span>
         </div>
     );

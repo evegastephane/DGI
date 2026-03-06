@@ -245,3 +245,16 @@ export const calculerTDL = (surfaceM2, commune = "") =>
         method: "POST",
         body: JSON.stringify({ surface_m2: surfaceM2, commune }),
     });
+
+/**
+ * Retourne le taux d'imposition selon la structureFiscale (CGA=0%, DGE=0.2%)
+ * Le profil est configure manuellement en BD.
+ */
+export const getTauxImpot = (structureFiscale) =>
+    fetcher(`/fiscal/taux-impot?structureFiscale=${encodeURIComponent(structureFiscale || "")}`);
+
+export const calculerImpot = (montant, structureFiscale) =>
+    fetcher("/fiscal/calculer-impot", {
+        method: "POST",
+        body: JSON.stringify({ montant, structureFiscale }),
+    });

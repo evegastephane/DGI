@@ -390,7 +390,7 @@ export default function PageAuthentifier() {
                                 border: "1px solid #fca5a5", borderRadius: 8,
                                 color: "#b91c1c", fontSize: 13,
                             }}>
-                                ⚠ {erreur}
+                                [!] {erreur}
                             </div>
                         )}
                         {typeDoc && (

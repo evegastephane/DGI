@@ -364,7 +364,7 @@ export default function TabEtablissements({
                     </p>
                     {fileName && (
                         <div style={{ marginTop: 10, padding: "8px 20px", background: "#dcfce7", color: "#166534", borderRadius: 5, fontSize: 12, fontWeight: 600 }}>
-                            ✓ {fileName}
+                            {fileName}
                         </div>
                     )}
                 </div>
@@ -442,7 +442,7 @@ export default function TabEtablissements({
                                 {lignes.length > 1 && (
                                     <button onClick={() => supprimerLigne(ligne.id)}
                                             style={{ color: C.red, background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>
-                                        ✕
+                                        X
                                     </button>
                                 )}
                             </td>
@@ -478,7 +478,7 @@ export default function TabEtablissements({
                     border: "1px solid #86efac", borderRadius: 8, color: "#15803d",
                     fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 8,
                 }}>
-                    ✅ Brouillon enregistré avec succès
+                    Brouillon enregistré avec succès
                     {idDeclaration && <span style={{ fontWeight: 400, color: "#166534" }}>— vous pouvez continuer vers le récapitulatif</span>}
                 </div>
             )}
@@ -487,7 +487,7 @@ export default function TabEtablissements({
                     marginTop: 16, padding: "12px 18px", background: "#fef2f2",
                     border: "1px solid #fca5a5", borderRadius: 8, color: "#b91c1c", fontSize: 13,
                 }}>
-                    ⚠ {saveErreur}
+                    [!] {saveErreur}
                 </div>
             )}
 
@@ -510,7 +510,7 @@ export default function TabEtablissements({
                 <button
                     onClick={() => {
                         if (!estEnregistre) {
-                            alert("⚠ Veuillez enregistrer vos données avant de continuer.\nCliquez sur « Enregistrer » pour sauvegarder vos établissements.");
+                            alert("Veuillez enregistrer vos données avant de continuer.\nCliquez sur « Enregistrer » pour sauvegarder vos établissements.");
                             return;
                         }
                         onSuivant();
