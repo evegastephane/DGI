@@ -7,7 +7,7 @@ import {
     telechargerAvisPDF,
     CURRENT_USER_ID,
 } from "../lib/api/contribuableApi";
-import { createPaiement } from "../lib/api/PaiementsApi";
+import { createPaiement, updatePaiement } from "../lib/api/PaiementsApi";
 import { initialiserPaiement, pollStatutPaiement } from "../lib/api/harmonyPaiementApi";
 
 const EXERCICE_OPTIONS = ["2025", "2024", "2023", "2022"];
@@ -283,10 +283,44 @@ function PagePaiement({ avis, onRetour, contribuable }) {
         const harmonyCode = HARMONY_CODE[selId] || "OM";
         const niu = contribuable?.NIU || contribuable?.niu || avis?.niu || "";
 
+        // Données communes utilisées dans tous les cas (succès, échec, timeout)
+        const montant    = Number(avis.montantBrut || avis.montantAPayer || 0);
+        const modeLabel  = fournisseur?.label || selId;
+
+        // Helper : créer une entrée BD avec un statut donné
+        const sauvegarderPaiement = async (statut, extra = {}) => {
+            try {
+                const p = await createPaiement({
+                    referenceDeclaration: avis.reference,
+                    anneeFiscale:         avis.annee ? Number(avis.annee) : null,
+                    structureFiscale:     avis.structure || "CDI YAOUNDE 1",
+                    montantAPayer:        montant,
+                    montantPaye:          statut === "SUCCESS" ? montant : 0,
+                    statutPaiement:       statut,
+                    modePaiement:         modeLabel,
+                    ...extra,
+                });
+                return p?.idPaiement ?? p?.id ?? null;
+            } catch (err) {
+                console.warn("[BD] sauvegarderPaiement échoué:", err.message);
+                return null;
+            }
+        };
+
+        // Helper : mettre à jour une entrée existante
+        const mettreAJour = async (id, updates) => {
+            if (!id) return;
+            try {
+                await updatePaiement(id, updates);
+            } catch (err) {
+                console.warn("[BD] mettreAJour échoué:", err.message);
+            }
+        };
+
         try {
             const res = await initialiserPaiement({
                 niu,
-                montantAPayer:        Number(avis.montantBrut || avis.montantAPayer || 0),
+                montantAPayer:        montant,
                 codeOperateur:        harmonyCode,
                 numeroCompte:         numNettoyé,
                 referenceDeclaration: avis.reference,
@@ -295,94 +329,84 @@ function PagePaiement({ avis, onRetour, contribuable }) {
                 libelleDeclaration:   `Paiement avis ${avis.reference}`,
             });
 
-            // Extraire la référence panier (plusieurs noms possibles selon la version de l'API)
             const refPanier =
-                res?.referencePanier     ||
-                res?.reference_panier    ||
+                res?.referencePanier       ||
+                res?.reference_panier      ||
                 res?.data?.referencePanier ||
-                res?.idPanier            ||
+                res?.idPanier              ||
                 avis.reference;
 
             setReferencePanier(refPanier);
             setRefPaiement(refPanier);
 
-            // Enregistrement initial en BD (statut IN_PROGRESS)
-            let paiementId = null;
-            try {
-                const paiementCree = await createPaiement({
-                    referenceDeclaration: avis.reference,
-                    anneeFiscale:         avis.annee,
-                    structureFiscale:     avis.structure || "CDI YAOUNDE 1",
-                    montantAPayer:        Number(avis.montantBrut || avis.montantAPayer || 0),
-                    montantPaye:          0,
-                    statutPaiement:       "IN_PROGRESS",
-                    operateur:            fournisseur?.label,
-                    referencePaiement:    refPanier,
-                    telephone,
-                    payeLe:               null,
-                });
-                paiementId = paiementCree?.id;
-            } catch (dbErr) {
-                console.warn("[BD] Enregistrement paiement initial échoué:", dbErr.message);
-            }
+            // ── 1. Enregistrement immédiat IN_PROGRESS ────────────────────────
+            const paiementId = await sauvegarderPaiement("IN_PROGRESS", {
+                referencePaiement: refPanier,
+            });
+            console.log("[BD] Paiement IN_PROGRESS créé, id =", paiementId);
 
             setStatut("IN_PROGRESS");
             showToast("Le paiement a été initié avec succès");
 
-            // Polling silencieux — met à jour la BD dès confirmation
+            // ── 2. Polling — résultat final via then/catch ───────────────────
+            // IMPORTANT : on utilise .then() pour le succès ET .catch() pour le timeout.
+            // Le callback onUpdate sert uniquement à mettre à jour l'UI en temps réel,
+            // PAS à déclencher les actions BD (sinon le .catch timeout écrase le SUCCESS).
             pollStatutPaiement(refPanier, (detail) => {
+                // Mise à jour UI uniquement pendant le polling
                 const s = String(detail?.statut ?? "").toUpperCase();
-                const isSuccess = ["1", "SUCCESSFUL", "PAYÉ", "PAYE"].includes(s) || detail?.statut === 1;
-                const isFailed  = ["2", "FAILED", "ÉCHOUÉ", "ECHEC"].includes(s) || detail?.statut === 2;
+                console.log("[Poll] tick statut:", detail?.statut, "→", s);
+            }, { intervalMs: 5_000, timeoutMs: 180_000 })
+                .then((detail) => {
+                    // ── Polling terminé avec succès ───────────────────────────────
+                    const s         = String(detail?.statut ?? "").toUpperCase();
+                    const isSuccess = detail?.statut === 1 || ["1", "SUCCESSFUL", "PAYE", "PAYÉ"].includes(s);
+                    const isFailed  = detail?.statut === 2 || ["2", "FAILED", "ECHEC"].includes(s);
 
-                if (isSuccess) {
-                    setStatut("SUCCESS");
-                    const refFinal = detail?.referencePaiement || refPanier;
-                    setRefPaiement(refFinal);
-                    // Mise à jour statut en BD
-                    if (paiementId) {
-                        import("../lib/api/PaiementsApi").then(({ updatePaiement }) =>
-                            updatePaiement(paiementId, {
+                    if (isSuccess) {
+                        const refFinal = detail?.referencePaiement || refPanier;
+                        setRefPaiement(refFinal);
+                        setStatut("SUCCESS");
+                        if (paiementId) {
+                            mettreAJour(paiementId, {
                                 statutPaiement:    "SUCCESS",
-                                montantPaye:       Number(avis.montantBrut || avis.montantAPayer || 0),
+                                montantPaye:       montant,
                                 referencePaiement: refFinal,
                                 payeLe:            new Date().toISOString(),
-                            }).catch(() => null)
-                        );
-                    } else {
-                        // Pas d'ID connu → créer un nouveau enregistrement de succès
-                        import("../lib/api/PaiementsApi").then(({ createPaiement: cp }) =>
-                            cp({
-                                referenceDeclaration: avis.reference,
-                                anneeFiscale:         avis.annee,
-                                structureFiscale:     avis.structure || "CDI YAOUNDE 1",
-                                montantAPayer:        Number(avis.montantBrut || avis.montantAPayer || 0),
-                                montantPaye:          Number(avis.montantBrut || avis.montantAPayer || 0),
-                                statutPaiement:       "SUCCESS",
-                                operateur:            fournisseur?.label,
-                                referencePaiement:    refFinal,
-                                telephone,
-                                payeLe:               new Date().toISOString(),
-                            }).catch(() => null)
-                        );
+                            });
+                        } else {
+                            sauvegarderPaiement("SUCCESS", {
+                                referencePaiement: refFinal,
+                                payeLe:            new Date().toISOString(),
+                            });
+                        }
+                    } else if (isFailed) {
+                        setStatut("FAILED");
+                        if (paiementId) {
+                            mettreAJour(paiementId, { statutPaiement: "FAILED" });
+                        } else {
+                            sauvegarderPaiement("FAILED", { referencePaiement: refPanier });
+                        }
                     }
-                }
-                if (isFailed) {
-                    setStatut("FAILED");
-                    if (paiementId) {
-                        import("../lib/api/PaiementsApi").then(({ updatePaiement }) =>
-                            updatePaiement(paiementId, { statutPaiement: "FAILED" }).catch(() => null)
-                        );
-                    }
-                }
-            }, { intervalMs: 5_000, timeoutMs: 180_000 }).catch(() => null);
+                })
+                .catch(() => {
+                    // ── 3. Timeout (3 min sans réponse) → FAILED seulement si pas déjà SUCCESS
+                    setStatut((current) => {
+                        if (current === "SUCCESS") return "SUCCESS"; // ne pas écraser un succès
+                        if (paiementId) mettreAJour(paiementId, { statutPaiement: "FAILED" });
+                        else sauvegarderPaiement("FAILED", { referencePaiement: refPanier });
+                        return "FAILED";
+                    });
+                });
 
         } catch (e) {
-            // Afficher le vrai message d'erreur Harmony 2 dans la console
+            // ── 4. Erreur Harmony immédiate (réseau, rejet…) → enregistrer FAILED
             console.error("[Harmony2] Erreur paiement:", e.message);
-            // Montrer l'erreur à l'utilisateur via le toast puis FAILED
             showToast("Erreur : " + e.message);
             setStatut("FAILED");
+            await sauvegarderPaiement("FAILED", {
+                referencePaiement: `ERR-${avis.reference}`,
+            });
         } finally {
             setLoading(false);
         }
@@ -426,7 +450,7 @@ function PagePaiement({ avis, onRetour, contribuable }) {
                             </div>
                             <div style={{ marginTop: 16, fontSize: 14, color: "#6B7280" }}>
                                 Statut du Paiement :{" "}
-                                <span style={{ fontWeight: 700, color: "#D97706" }}>IN_PROGRESS</span>
+                                <span style={{ fontWeight: 700, color: "#D97706" }}>PAIEMENT INITIE</span>
                             </div>
                             <button onClick={onRetour} style={{
                                 marginTop: 32, display: "inline-flex", alignItems: "center", gap: 8,
@@ -441,7 +465,12 @@ function PagePaiement({ avis, onRetour, contribuable }) {
 
                     {statut === "SUCCESS" && (
                         <>
-                            <div style={{ fontSize: 52, marginBottom: 12 }}>✅</div>
+                            <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
+                                <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                                    <circle cx="26" cy="26" r="26" fill="#DCFCE7"/>
+                                    <path d="M14 26L22 34L38 18" stroke="#16A34A" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            </div>
                             <p style={{ fontSize: 20, fontWeight: 700, color: "#15803D", margin: "0 0 8px" }}>
                                 Paiement réussi !
                             </p>
@@ -472,7 +501,12 @@ function PagePaiement({ avis, onRetour, contribuable }) {
 
                     {statut === "FAILED" && (
                         <>
-                            <div style={{ fontSize: 52, marginBottom: 12 }}>❌</div>
+                            <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
+                                <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                                    <circle cx="26" cy="26" r="26" fill="#FEE2E2"/>
+                                    <path d="M17 17L35 35M35 17L17 35" stroke="#DC2626" strokeWidth="3.5" strokeLinecap="round"/>
+                                </svg>
+                            </div>
                             <p style={{ fontSize: 20, fontWeight: 700, color: "#DC2626", margin: "0 0 8px" }}>
                                 Paiement échoué
                             </p>
@@ -685,7 +719,7 @@ function ActionMenu({ avis, onPayer }) {
                 color: "#6B7280", fontSize: 20, letterSpacing: 3,
                 padding: "4px 8px", borderRadius: 4,
             }}>
-                {downloading ? "⏳" : "•••"}
+                {downloading ? "..." : "•••"}
             </button>
 
             {open && (
@@ -695,11 +729,11 @@ function ActionMenu({ avis, onPayer }) {
                     borderRadius: 10, boxShadow: "0 8px 28px rgba(0,0,0,0.15)",
                     minWidth: 230, overflow: "hidden",
                 }}>
-                    {item(() => handleTelecharger("avis"),   "⬇", "Télécharger l'avis",   downloading)}
+                    {item(() => handleTelecharger("avis"),   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>, "Télécharger l'avis",   downloading)}
                     <div style={{ height: 1, background: "#F3F4F6" }} />
-                    {item(() => handleTelecharger("accuse"), "📄", "Télécharger l'accusé", downloading)}
+                    {item(() => handleTelecharger("accuse"), <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>, "Télécharger l'accusé", downloading)}
                     <div style={{ height: 1, background: "#F3F4F6" }} />
-                    {item(() => { setOpen(false); onPayer(avis); }, "💳", "Payer")}
+                    {item(() => { setOpen(false); onPayer(avis); }, <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>, "Payer")}
                 </div>
             )}
         </td>
@@ -828,7 +862,7 @@ export default function PageListeDesAvis() {
                                 color: C.orange, borderRadius: 4, padding: "14px 20px",
                                 fontWeight: 700, fontSize: 14, cursor: "pointer",
                             }}>
-                                🔍 RECHERCHER
+                                RECHERCHER
                             </button>
                         </div>
                     )}
@@ -844,7 +878,7 @@ export default function PageListeDesAvis() {
                     {loading ? (
                         <div style={{ padding: "60px", textAlign: "center", color: "#9ca3af" }}>Chargement...</div>
                     ) : erreur ? (
-                        <div style={{ padding: "40px", textAlign: "center", color: "#b91c1c" }}>⚠ {erreur}</div>
+                        <div style={{ padding: "40px", textAlign: "center", color: "#b91c1c" }}>[!] {erreur}</div>
                     ) : (
                         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
                             <thead>

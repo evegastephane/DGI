@@ -245,28 +245,8 @@ export default function PageMonProfil() {
 
             <div style={{ padding: "24px 18px 60px", display: "flex", gap: 24, flexWrap: "wrap" }}>
 
-                {/* ── Panneau gauche : switcher de profils ─────────────────── */}
-                <div style={{ width: 280, flexShrink: 0 }}>
-                    <div style={{
-                        background: "#fff", borderRadius: 10, padding: 20,
-                        boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-                        border: "1px solid #E5E7EB",
-                    }}>
-                        <p style={{ fontSize: 13, fontWeight: 600, color: C.textGrey, margin: "0 0 14px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                            Profils disponibles
-                        </p>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                            {profils.map((p) => (
-                                <ProfilCard
-                                    key={p.id}
-                                    profil={p}
-                                    actif={profilId === p.id}
-                                    onClick={() => setProfilId(p.id)}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                </div>
+                {/* ── Panneau gauche : switcher de profils (masqué - géré manuellement en BD) ── */}
+                {/* Les profils restent en BD, le profil actif est géré via profilActif dans mockData */}
 
                 {/* ── Panneau droit : formulaire ───────────────────────────── */}
                 <div style={{ flex: 1, minWidth: 300 }}>
@@ -344,12 +324,36 @@ export default function PageMonProfil() {
                                 {/* Messages */}
                                 {enregistrement === "succes" && (
                                     <div style={{ marginBottom: 16, padding: "10px 16px", background: "#DCFCE7", color: "#16A34A", borderRadius: 6, fontSize: 14, fontWeight: 500 }}>
-                                        ✓ Profil mis à jour avec succès.
+                                        Profil mis à jour avec succès.
                                     </div>
                                 )}
                                 {enregistrement === "erreur" && (
                                     <div style={{ marginBottom: 16, padding: "10px 16px", background: "#FEE2E2", color: "#DC2626", borderRadius: 6, fontSize: 14, fontWeight: 500 }}>
                                         Veuillez remplir tous les champs obligatoires.
+                                    </div>
+                                )}
+
+                                {/* Bloc information fiscale selon profil */}
+                                {centre && ROLE_BADGE[centre] && (
+                                    <div style={{
+                                        marginBottom: 20, padding: "14px 18px",
+                                        background: centre === "CGA" ? "#F5F3FF" : centre === "DGE" ? "#EFF6FF" : "#F0FDF4",
+                                        border: `1px solid ${centre === "CGA" ? "#DDD6FE" : centre === "DGE" ? "#BFDBFE" : "#BBF7D0"}`,
+                                        borderRadius: 8,
+                                    }}>
+                                        <p style={{ fontSize: 13, fontWeight: 700, color: couleur, margin: "0 0 6px" }}>
+                                            Regime fiscal applicable
+                                        </p>
+                                        {centre === "CGA" && (
+                                            <p style={{ fontSize: 13, color: "#6B7280", margin: 0 }}>
+                                                En tant qu'adherant CGA, vous etes <strong>exonere d'impot sur 1 an</strong> (taux : 0%).
+                                            </p>
+                                        )}
+                                        {centre === "DGE" && (
+                                            <p style={{ fontSize: 13, color: "#6B7280", margin: 0 }}>
+                                                En tant que contribuable DGE, un taux d'imposition preferentiel de <strong>0,2%</strong> vous est applique.
+                                            </p>
+                                        )}
                                     </div>
                                 )}
 

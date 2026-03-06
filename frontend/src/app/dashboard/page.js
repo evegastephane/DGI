@@ -494,7 +494,7 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
                     iconColor="#ca8a04"
                     label="DPR Soumises"
                     value={dprSoumises}
-                    sub={dprGenerees > 0 ? `↗ ${pctSoumises}% des DPR générées` : 'Aucune DPR'}
+                    sub={dprGenerees > 0 ? `^ ${pctSoumises}% des DPR générées` : 'Aucune DPR'}
                     subColor="#f58220"
                 />
             </div>
@@ -640,7 +640,7 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
                             </h3>
                             {(stats?.amrEnCours ?? 0) > 0 && (
                                 <p style={{ fontSize: 12, color: '#ef4444', fontWeight: 500, margin: '2px 0 0' }}>
-                                    ⚠ {stats.amrEnCours} AMR en cours · {formatMontant(stats.amrMontantTotal)}
+                                    [!] {stats.amrEnCours} AMR en cours · {formatMontant(stats.amrMontantTotal)}
                                 </p>
                             )}
                         </div>

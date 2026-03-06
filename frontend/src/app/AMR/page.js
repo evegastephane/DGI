@@ -204,7 +204,7 @@ function ManageColumnsModal({ allColumns, hiddenCols, onToggle, onClose }) {
             }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid ${C.border}` }}>
                     <span style={{ fontWeight: 700, fontSize: 15, color: C.textDark }}>Gérer les colonnes</span>
-                    <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: C.textGrey }}>✕</button>
+                    <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: C.textGrey }}>X</button>
                 </div>
                 <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
                     {allColumns.map((col) => (
@@ -463,7 +463,7 @@ function OngletTable({ allColumns, statutOptions, statutFiltreMise }) {
                             onMouseEnter={(e) => (e.currentTarget.style.background = C.orangeBg)}
                             onMouseLeave={(e) => (e.currentTarget.style.background = C.white)}
                         >
-                            🔍 RECHERCHER
+                            RECHERCHER
                         </button>
                     </div>
                 )}

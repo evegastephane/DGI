@@ -4,16 +4,21 @@ import com.example.backend.model.Paiement;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
 import java.util.List;
 
 @Repository
 public interface PaiementRepository extends JpaRepository<Paiement, Long> {
-    List<Paiement> findByIdDeclaration(Long idDeclaration);
-    List<Paiement> findByStatut(String statut);
 
-    @Query("SELECT COALESCE(SUM(p.montantPaye), 0) FROM Paiement p WHERE p.statut = 'EFFECTUE'")
+    // ── Utilisé par le Dashboard ──────────────────────────────────────────
+    // Ancienne query corrigée : p.statut → p.statutPaiement
+    @Query("SELECT COALESCE(SUM(p.montantPaye), 0) FROM Paiement p WHERE p.statutPaiement = 'SUCCESS'")
     Double sumTotalRecouvert();
 
-    @Query("SELECT COALESCE(SUM(p.montantPaye), 0) FROM Paiement p WHERE p.idDeclaration = :idDeclaration")
-    Double sumByDeclaration(Long idDeclaration);
+    // ── Filtres utiles ────────────────────────────────────────────────────
+    List<Paiement> findByStatutPaiement(String statutPaiement);
+
+    List<Paiement> findByAnneeFiscale(Integer anneeFiscale);
+
+    List<Paiement> findByReferenceDeclaration(String referenceDeclaration);
 }

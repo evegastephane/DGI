@@ -9,6 +9,7 @@ import java.time.LocalDate;
 public class AvisImposition {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idAvis;
+
     private String reference;
     private String ribReceveur;
     private LocalDate dateReception;
@@ -18,7 +19,8 @@ public class AvisImposition {
     private LocalDate datePaiement;
     private Long idContribuable;
     private Long idDeclaration;
-    // Champs enrichis copiés depuis la Declaration au moment de la création
+
+    // Champs ajoutés pour AvisGeneratorUtil
     private Integer anneeFiscale;
     private String structureFiscale;
     private String typeDeclaration;

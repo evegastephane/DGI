@@ -4,6 +4,7 @@ import { useState } from "react";
 import C from "../../lib/utils/colors";
 import { creerDeclaration, modifierDeclaration } from "../../lib/api/declarationApi";
 import { CURRENT_USER_ID } from "../../lib/api/contribuableApi";
+import ModalPaiement from "../paiement/ModalPaiement";
 
 // ─── Seuils CIME/CSI et DGE ──────────────────────────────────────────────────
 const SEUILS = {
@@ -11,17 +12,10 @@ const SEUILS = {
     DGE:  { min: 5_000_000,     max: 2_500_000_000,   label: "DGE"      },
 };
 
-// Retourne le régime applicable en fonction de la base imposable
 function detecterRegime(base) {
     if (base >= SEUILS.DGE.min) return "DGE";
     return "CIME";
 }
-
-// ─── Formules fiscales ────────────────────────────────────────────────────────
-// Base = Total_CA (somme de tous les CA) + Marge administrée
-// Patente         : base × 0,156 %
-// Licence patente : base × 0,156 %
-// TDL             : barème annuel fixe selon tranche de patente
 
 const TAUX = 0.00156;
 const TAUX_AFFICHE = "0,156 %";
@@ -39,54 +33,22 @@ function calculerTDL(patente) {
 }
 
 function calculerDepuisLignes(lignes) {
-    // ── Base imposable = Total CA + Marge administrée ─────────────────────
     const totalCA = lignes.reduce((a, l) => a + (parseFloat(l.Total_CA)                  || 0), 0);
     const marge   = lignes.reduce((a, l) => a + (parseFloat(l.montant_marge_administree) || 0), 0);
-    const base    = totalCA + marge; // ← colonne "Principal" = cette base
+    const base    = totalCA + marge;
 
-    // ── Patente : base × 0,156 % ──────────────────────────────────────────
     const patentePrincipal = Math.round(base * TAUX);
-
-    // ── Licence sur la patente : base × 0,156 % ───────────────────────────
     const licencePrincipal = Math.round(base * TAUX);
-
-    // ── TDL : barème basé sur le montant de la patente ────────────────────
-    const tdlPrincipal = calculerTDL(patentePrincipal);
-
-    // ── Solde = patente + licence + TDL ───────────────────────────────────
-    const soldeTotal = patentePrincipal + licencePrincipal + tdlPrincipal;
-
-    const regime = detecterRegime(base);
+    const tdlPrincipal     = calculerTDL(patentePrincipal);
+    const soldeTotal       = patentePrincipal + licencePrincipal + tdlPrincipal;
+    const regime           = detecterRegime(base);
 
     return {
-        base,
-        totalCA,
-        marge,
-        regime,
-        patente: {
-            principal: base,             // ← Principal = CA + marge (base imposable)
-            taux:      TAUX_AFFICHE,
-            penalites: 0,
-            total:     patentePrincipal, // ← Total = base × taux
-        },
-        licencePatente: {
-            principal: base,
-            taux:      TAUX_AFFICHE,
-            penalites: 0,
-            total:     licencePrincipal,
-        },
-        tdlPatente: {
-            principal: base,
-            taux:      "Barème",
-            penalites: 0,
-            total:     tdlPrincipal,
-        },
-        solde: {
-            principal: base,
-            taux:      "—",
-            penalites: 0,
-            total:     soldeTotal,
-        },
+        base, totalCA, marge, regime,
+        patente:        { principal: base, taux: TAUX_AFFICHE, penalites: 0, total: patentePrincipal },
+        licencePatente: { principal: base, taux: TAUX_AFFICHE, penalites: 0, total: licencePrincipal },
+        tdlPatente:     { principal: base, taux: "Barème",     penalites: 0, total: tdlPrincipal     },
+        solde:          { principal: base, taux: "—",          penalites: 0, total: soldeTotal        },
     };
 }
 
@@ -125,21 +87,15 @@ const fmt = (n) => (n !== null && n !== undefined ? n.toLocaleString("fr-FR") : 
 
 // ─── Alerte régime ────────────────────────────────────────────────────────────
 function AlerteRegime({ regime, base, onConfirmer, onAnnuler }) {
-    const seuil = SEUILS[regime];
-    const autre = regime === "DGE" ? "CIME/CSI" : "DGE";
+    const seuil       = SEUILS[regime];
     const couleurBg   = regime === "DGE" ? "#FEF3C7" : "#EFF6FF";
     const couleurBord = regime === "DGE" ? "#F59E0B" : "#93C5FD";
     const couleurTxt  = regime === "DGE" ? "#92400E" : "#1D4ED8";
 
     return (
-        <div style={{
-            background: couleurBg, border: `2px solid ${couleurBord}`, borderRadius: 12,
-            padding: "20px 24px", marginBottom: 20,
-        }}>
+        <div style={{ background: couleurBg, border: `2px solid ${couleurBord}`, borderRadius: 12, padding: "20px 24px", marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-                <span style={{ fontSize: 28, lineHeight: 1 }}>
-                    {regime === "DGE" ? "🏦" : "🏢"}
-                </span>
+                <span style={{ fontSize: 28, lineHeight: 1 }}>{regime === "DGE" ? "" : ""}</span>
                 <div style={{ flex: 1 }}>
                     <p style={{ fontWeight: 700, color: couleurTxt, margin: "0 0 6px", fontSize: 15 }}>
                         Basculement vers le régime {regime === "DGE" ? "DGE" : "CIME/CSI"}
@@ -149,9 +105,8 @@ function AlerteRegime({ regime, base, onConfirmer, onAnnuler }) {
                     </p>
                     <p style={{ color: couleurTxt, fontSize: 13, margin: "0 0 14px" }}>
                         {regime === "DGE"
-                            ? `Ce montant dépasse le seuil CIME/CSI (4 500 000 FCFA). Votre déclaration relève désormais de la DGE (seuil : 5 000 000 – 2,5 milliards FCFA).`
-                            : `Ce montant est inférieur au seuil DGE. Votre déclaration relève des CIME/CSI (seuil : 141 500 – 4 500 000 FCFA).`
-                        }
+                            ? `Ce montant dépasse le seuil CIME/CSI (4 500 000 FCFA). Votre déclaration relève désormais de la DGE.`
+                            : `Ce montant est inférieur au seuil DGE. Votre déclaration relève des CIME/CSI.`}
                     </p>
                     <p style={{ color: couleurTxt, fontSize: 12, margin: "0 0 16px", fontStyle: "italic" }}>
                         Confirmez-vous la soumission sous le régime <strong>{seuil.label}</strong> ?
@@ -162,7 +117,7 @@ function AlerteRegime({ regime, base, onConfirmer, onAnnuler }) {
                             color: "#fff", border: "none", borderRadius: 8,
                             padding: "10px 22px", fontWeight: 700, fontSize: 13, cursor: "pointer",
                         }}>
-                            ✓ Confirmer — Régime {seuil.label}
+                            Confirmer - Régime {seuil.label}
                         </button>
                         <button onClick={onAnnuler} style={{
                             background: "#fff", color: "#6B7280",
@@ -186,18 +141,18 @@ export default function TabRecapitulatif({
                                              onRetour,
                                              onDeclarationSoumise,
                                          }) {
-    const [loading,        setLoading]        = useState(false);
-    const [succes,         setSucces]         = useState(null);
-    const [erreur,         setErreur]         = useState(null);
-    const [confirmer,      setConfirmer]      = useState(false);
-    const [alerteRegime,   setAlerteRegime]   = useState(false); // alerte passage CIME→DGE
+    const [loading,       setLoading]       = useState(false);
+    const [succes,        setSucces]        = useState(null);   // objet déclaration après soumission
+    const [erreur,        setErreur]        = useState(null);
+    const [confirmer,     setConfirmer]     = useState(false);
+    const [alerteRegime,  setAlerteRegime]  = useState(false);
+    const [modalPaiement, setModalPaiement] = useState(false);  // ← nouveau : affiche ModalPaiement
 
     const calculs      = lignes.length > 0 ? calculerDepuisLignes(lignes) : null;
     const totalGeneral = calculs ? calculs.solde.total : 0;
     const regime       = calculs ? calculs.regime : null;
-    const base         = calculs ? calculs.base : 0;
+    const base         = calculs ? calculs.base   : 0;
 
-    // Validation min/max selon régime
     const validationRegime = (() => {
         if (!calculs) return null;
         const seuil = SEUILS[regime];
@@ -206,7 +161,6 @@ export default function TabRecapitulatif({
             msg: `La base imposable (${fmt(base)} FCFA) est inférieure au minimum ${seuil.label} : ${fmt(seuil.min)} FCFA.`,
         };
         if (base > seuil.max) {
-            // Dépassement du max CIME → passage DGE possible
             if (regime === "CIME") return {
                 type: "warning_dge",
                 msg: `La base (${fmt(base)} FCFA) dépasse le plafond CIME/CSI (${fmt(SEUILS.CIME.max)} FCFA). Passage au régime DGE détecté.`,
@@ -221,7 +175,6 @@ export default function TabRecapitulatif({
 
     const handleDemanderSoumission = () => {
         if (validationRegime?.type === "warning_dge") {
-            // Afficher l'alerte de passage CIME → DGE avant de confirmer
             setAlerteRegime(true);
         } else {
             setConfirmer(true);
@@ -252,7 +205,7 @@ export default function TabRecapitulatif({
             setConfirmer(false);
             setAlerteRegime(false);
             if (onDeclarationSoumise) {
-                setTimeout(() => onDeclarationSoumise(), 2000);
+                setTimeout(() => onDeclarationSoumise(), 4000);
             }
         } catch (e) {
             setErreur(e.message);
@@ -260,6 +213,14 @@ export default function TabRecapitulatif({
             setLoading(false);
         }
     };
+
+    // Objet déclaration à passer à ModalPaiement (format attendu par la modal)
+    const declarationPourPaiement = succes ? {
+        reference:    succes.referenceDeclaration || succes.reference || `DECL-${idDeclaration || ""}`,
+        annee:        declarationContext?.exercice || new Date().getFullYear(),
+        montantBrut:  totalGeneral,
+        montantAPayer: totalGeneral,
+    } : null;
 
     return (
         <div>
@@ -272,9 +233,7 @@ export default function TabRecapitulatif({
 
             {/* Résumé base imposable */}
             {calculs && (
-                <div style={{
-                    display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20,
-                }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
                     <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "14px 16px" }}>
                         <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Total CA</p>
                         <p style={{ fontSize: 16, fontWeight: 700, color: C.orange, margin: 0 }}>{fmt(calculs.totalCA)} FCFA</p>
@@ -312,9 +271,7 @@ export default function TabRecapitulatif({
                 }}>
                     <span style={{ fontSize: 18 }}>⚠</span>
                     <div>
-                        <p style={{ fontWeight: 700, color: "#B91C1C", margin: "0 0 4px", fontSize: 13 }}>
-                            Montant hors plage autorisée
-                        </p>
+                        <p style={{ fontWeight: 700, color: "#B91C1C", margin: "0 0 4px", fontSize: 13 }}>Montant hors plage autorisée</p>
                         <p style={{ color: "#DC2626", fontSize: 13, margin: 0 }}>{validationRegime.msg}</p>
                     </div>
                 </div>
@@ -330,24 +287,46 @@ export default function TabRecapitulatif({
                 />
             )}
 
-            {/* Succès */}
+            {/* ── Succès soumission ── avec bouton PAYER ─────────────────────── */}
             {succes && (
                 <div style={{
                     background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10,
-                    padding: "16px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12,
+                    padding: "16px 20px", marginBottom: 20,
                 }}>
-                    <span style={{ fontSize: 22 }}>✅</span>
-                    <div>
-                        <p style={{ fontWeight: 700, color: "#15803d", margin: 0, fontSize: 14 }}>
-                            Déclaration soumise avec succès !
-                        </p>
-                        <p style={{ color: "#166534", margin: "4px 0 0", fontSize: 13 }}>
-                            Référence : <strong>{succes.referenceDeclaration || "—"}</strong> —
-                            Montant : <strong>{totalGeneral.toLocaleString("fr-FR")} FCFA</strong>
-                        </p>
-                        <p style={{ color: "#166534", margin: "4px 0 0", fontSize: 12 }}>
-                            Un avis d'imposition a été généré. Consultez la <strong>Liste des Avis</strong>.
-                        </p>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                        <span style={{ fontSize: 22, marginTop: 2 }}>✅</span>
+                        <div style={{ flex: 1 }}>
+                            <p style={{ fontWeight: 700, color: "#15803d", margin: 0, fontSize: 14 }}>
+                                Déclaration soumise avec succès !
+                            </p>
+                            <p style={{ color: "#166534", margin: "4px 0 0", fontSize: 13 }}>
+                                Référence : <strong>{succes.referenceDeclaration || "—"}</strong> —
+                                Montant : <strong>{totalGeneral.toLocaleString("fr-FR")} FCFA</strong>
+                            </p>
+                            <p style={{ color: "#166534", margin: "4px 0 8px", fontSize: 12 }}>
+                                Un avis d'imposition a été généré. Consultez la <strong>Liste des Avis</strong>.
+                            </p>
+                            {/* ── Bouton PAYER ── */}
+                            <button
+                                onClick={() => setModalPaiement(true)}
+                                style={{
+                                    display: "inline-flex", alignItems: "center", gap: 8,
+                                    background: C.orange, color: "#fff",
+                                    border: "none", borderRadius: 8,
+                                    padding: "10px 24px", fontWeight: 700, fontSize: 14,
+                                    cursor: "pointer", marginTop: 4,
+                                    boxShadow: "0 4px 12px rgba(242,148,0,0.3)",
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = "#D97706"}
+                                onMouseLeave={(e) => e.currentTarget.style.background = C.orange}
+                            >
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                                    <line x1="1" y1="10" x2="23" y2="10"/>
+                                </svg>
+                                Payer maintenant — {totalGeneral.toLocaleString("fr-FR")} FCFA
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -358,7 +337,7 @@ export default function TabRecapitulatif({
                     background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10,
                     padding: "14px 18px", marginBottom: 20, color: "#b91c1c", fontSize: 13,
                 }}>
-                    ⚠ {erreur}
+                    [!] {erreur}
                 </div>
             )}
 
@@ -369,7 +348,7 @@ export default function TabRecapitulatif({
                     padding: "16px 20px", marginBottom: 20,
                 }}>
                     <p style={{ fontWeight: 700, color: "#92400e", margin: "0 0 8px", fontSize: 14 }}>
-                        ⚠ Confirmer la soumission ?
+                        Confirmer la soumission ?
                     </p>
                     <p style={{ color: "#78350f", fontSize: 13, margin: "0 0 4px" }}>
                         Base imposable : <strong>{fmt(base)} FCFA</strong> — Régime <strong>{regime ? SEUILS[regime].label : "—"}</strong>
@@ -384,7 +363,7 @@ export default function TabRecapitulatif({
                             background: C.orange, color: C.white, border: "none", borderRadius: 8,
                             padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer",
                         }}>
-                            {loading ? "Soumission..." : "✓ Confirmer"}
+                            {loading ? "Soumission..." : "Confirmer"}
                         </button>
                         <button onClick={() => setConfirmer(false)} style={{
                             background: C.white, color: C.textMid, border: `1px solid ${C.border}`,
@@ -473,6 +452,19 @@ export default function TabRecapitulatif({
                     </button>
                 )}
             </div>
+
+            {/* ── Modal Paiement (s'ouvre après soumission réussie) ───────────── */}
+            {modalPaiement && declarationPourPaiement && (
+                <ModalPaiement
+                    declaration={declarationPourPaiement}
+                    contribuable={{ NIU: "" }}
+                    onClose={() => setModalPaiement(false)}
+                    onSuccess={(result) => {
+                        console.log("[Paiement] Succès depuis déclaration:", result);
+                        setModalPaiement(false);
+                    }}
+                />
+            )}
         </div>
     );
 }

@@ -155,7 +155,7 @@ function DraftActions({ declaration, onModifier, onSoumis }) {
                     }}
                     onMouseEnter={(e) => { if (!submitting) e.currentTarget.style.background = "#D97706"; }}
                     onMouseLeave={(e) => { if (!submitting) e.currentTarget.style.background = C.orange; }}>
-                {submitting ? "⏳" : (
+                {submitting ? "..." : (
                     <>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -193,7 +193,7 @@ function ActionMenu({ declaration, contribuable }) {
         <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
             <button onClick={() => setOpen(!open)}
                     style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", fontSize: 20, letterSpacing: 3, padding: "4px 6px", borderRadius: 4 }}>
-                {downloading ? "⏳" : "•••"}
+                {downloading ? "..." : "•••"}
             </button>
             {open && (
                 <div style={{
@@ -202,8 +202,8 @@ function ActionMenu({ declaration, contribuable }) {
                     borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", minWidth: 200, overflow: "hidden",
                 }}>
                     {[
-                        { label: downloading ? "⏳ Génération..." : "⬇ Télécharger l'avis", onClick: handleTelecharger, disabled: downloading },
-                        { label: "💳 Payer", onClick: () => setOpen(false), disabled: false },
+                        { label: downloading ? "Generation..." : "Télécharger l'avis", onClick: handleTelecharger, disabled: downloading },
+                        { label: "Payer", onClick: () => setOpen(false), disabled: false },
                     ].map((item) => (
                         <button key={item.label} onClick={item.onClick} disabled={item.disabled}
                                 style={{
@@ -390,7 +390,7 @@ export default function MesDeclarations({ setPage, onModifierDraft }) {
                 {loading ? (
                     <div style={{ padding: "60px", textAlign: "center", color: "#9CA3AF", fontSize: 14 }}>Chargement...</div>
                 ) : error ? (
-                    <div style={{ padding: "40px", textAlign: "center", color: "#B91C1C", fontSize: 13 }}>⚠ {error}</div>
+                    <div style={{ padding: "40px", textAlign: "center", color: "#B91C1C", fontSize: 13 }}>[!] {error}</div>
                 ) : (
                     <div style={{ overflowX: "auto" }}>
                         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
@@ -409,7 +409,7 @@ export default function MesDeclarations({ setPage, onModifierDraft }) {
                             {paginated.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} style={{ padding: "60px 24px", textAlign: "center", color: "#9CA3AF", fontSize: 14 }}>
-                                        <div style={{ fontSize: 40, marginBottom: 12 }}>📄</div>
+                                        <div style={{ fontSize: 40, marginBottom: 12 }}></div>
                                         Aucune déclaration trouvée.
                                     </td>
                                 </tr>

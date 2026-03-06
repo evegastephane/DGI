@@ -1,39 +1,66 @@
-version: "3.8"
+version: "3.9"
 
 services:
+
+  # ─── Base de données PostgreSQL ──────────────────────────────────────────
   postgres:
-    image: postgres:15
-    container_name: postgres_db
+    image: postgres:15-alpine
+    container_name: dgi_postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: mydb
-      POSTGRES_USER: postgres
+      POSTGRES_DB:       mydb
+      POSTGRES_USER:     postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-  backend:
-    build: ./backend
-    container_name: spring_backend
     ports:
-      - "8080:8080"
+      - "5433:5432"       # port 5433 sur la machine hôte (comme dans ton app.properties)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mydb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Backend Spring Boot ──────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dgi_backend
+    restart: unless-stopped
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mydb
+      # PostgreSQL — pointe vers le service "postgres" du réseau Docker
+      SPRING_DATASOURCE_URL:      jdbc:postgresql://postgres:5432/mydb
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-    depends_on:
-      - postgres
-
-  frontend:
-    build: ./frontend
-    container_name: dgi
+      # Chemins PDF — montés via volumes ci-dessous
+      AVIS_TEMPLATE_PATH: /app/templates/avis_template.docx
+      AVIS_SCRIPTS_PATH:  /app/scripts
+      AVIS_OUTPUT_DIR:    /app/tmp/avis-output
+    volumes:
+      - ./backend/src/main/resources/templates:/app/templates:ro
+      - ./backend/src/main/resources/scripts:/app/scripts:ro
+      - avis_output:/app/tmp/avis-output
     ports:
-      - "3000:3000"
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ─── Frontend Next.js ─────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dgi_frontend
+    restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: http://backend:8080/api
+    ports:
+      - "3000:3000"
     depends_on:
       - backend
 
 volumes:
   postgres_data:
+  avis_output:

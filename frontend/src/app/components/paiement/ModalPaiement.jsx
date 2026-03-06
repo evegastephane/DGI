@@ -1,6 +1,6 @@
 "use client";
 // src/app/components/paiement/ModalPaiement.jsx
-// ─── Modal de paiement Harmony 2 ──────────────────────────────────────────
+// ─── Modal de paiement Harmony 2 — avec sauvegarde BD ─────────────────────
 // Usage : <ModalPaiement declaration={...} contribuable={...} onClose={...} onSuccess={...} />
 
 import { useState, useEffect, useRef } from "react";
@@ -11,6 +11,7 @@ import {
     pollStatutPaiement,
     genererReference,
 } from "../../lib/api/harmonyPaiementApi";
+import { createPaiement, updatePaiement } from "../../lib/api/PaiementsApi";
 
 // ─── Étapes ───────────────────────────────────────────────────────────────
 const ETAPES = { SAISIE: "saisie", TRAITEMENT: "traitement", SUCCES: "succes", ECHEC: "echec" };
@@ -75,7 +76,7 @@ function CarteOperateur({ op, selected, onClick }) {
     );
 }
 
-// ─── Étape traitement (spinner + polling) ─────────────────────────────────
+// ─── Étape traitement ─────────────────────────────────────────────────────
 function EtapeTraitement({ message, sousMessage }) {
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, padding: "32px 0" }}>
@@ -120,30 +121,30 @@ function ResumeTransaction({ lignes }) {
 
 // ─── Modal principale ──────────────────────────────────────────────────────
 export default function ModalPaiement({ declaration, contribuable, onClose, onSuccess }) {
-    const [etape,          setEtape]          = useState(ETAPES.SAISIE);
-    const [operateur,      setOperateur]      = useState(null);
-    const [numero,         setNumero]         = useState("");
-    const [erreurs,        setErreurs]        = useState({});
-    const [referencePanier,setReferencePanier]= useState(null);
-    const [detailPanier,   setDetailPanier]   = useState(null);
-    const [traitementMsg,  setTraitementMsg]  = useState("");
-    const [echecMsg,       setEchecMsg]       = useState("");
-    const stopPollRef = useRef(false);
+    const [etape,           setEtape]           = useState(ETAPES.SAISIE);
+    const [operateur,       setOperateur]       = useState(null);
+    const [numero,          setNumero]          = useState("");
+    const [erreurs,         setErreurs]         = useState({});
+    const [referencePanier, setReferencePanier] = useState(null);
+    const [detailPanier,    setDetailPanier]    = useState(null);
+    const [traitementMsg,   setTraitementMsg]   = useState("");
+    const [echecMsg,        setEchecMsg]        = useState("");
+    const stopPollRef  = useRef(false);
+    const paiementIdRef = useRef(null); // ← ID BD du paiement IN_PROGRESS
 
     const montant  = Number(declaration?.montantBrut || declaration?.montantAPayer || 0);
     const niu      = contribuable?.NIU || contribuable?.niu || "";
-    const reference= declaration?.reference || genererReference();
+    const reference = declaration?.reference || genererReference();
 
-    // Nettoyage sur démontage
     useEffect(() => { return () => { stopPollRef.current = true; }; }, []);
 
     // ── Validation ────────────────────────────────────────────────────────
     const valider = () => {
         const e = {};
-        if (!operateur) e.operateur = "Sélectionnez un opérateur";
-        if (!numero.trim()) e.numero = "Numéro requis";
+        if (!operateur)              e.operateur = "Sélectionnez un opérateur";
+        if (!numero.trim())          e.numero    = "Numéro requis";
         else if (!/^\d{8,12}$/.test(numero.trim())) e.numero = "Format invalide (8 à 12 chiffres)";
-        if (!montant || montant <= 0) e.montant = "Montant invalide";
+        if (!montant || montant <= 0) e.montant  = "Montant invalide";
         setErreurs(e);
         return Object.keys(e).length === 0;
     };
@@ -157,13 +158,13 @@ export default function ModalPaiement({ declaration, contribuable, onClose, onSu
         try {
             const res = await initialiserPaiement({
                 niu,
-                montantAPayer:       montant,
-                codeOperateur:       operateur.code,
-                numeroCompte:        numero.trim(),
+                montantAPayer:        montant,
+                codeOperateur:        operateur.code,
+                numeroCompte:         numero.trim(),
                 referenceDeclaration: reference,
-                libelleImpot:        `Patente — ${declaration?.annee || new Date().getFullYear()}`,
-                typeDeclaration:     "PATENTE",
-                libelleDeclaration:  `Paiement de la déclaration ${reference}`,
+                libelleImpot:         `Patente — ${declaration?.annee || new Date().getFullYear()}`,
+                typeDeclaration:      "PATENTE",
+                libelleDeclaration:   `Paiement de la déclaration ${reference}`,
             });
 
             const refPanier = res.referencePanier || res.reference_panier || res.data?.referencePanier;
@@ -172,8 +173,26 @@ export default function ModalPaiement({ declaration, contribuable, onClose, onSu
             setReferencePanier(refPanier);
             setTraitementMsg(`Paiement envoyé sur ${operateur.label}…`);
 
-            // Polling toutes les 5s (max 3 min)
-            await pollStatutPaiement(
+            // ── Enregistrement immédiat en BD (IN_PROGRESS) ───────────────
+            try {
+                const paiementCree = await createPaiement({
+                    referenceDeclaration: reference,
+                    referencePaiement:    refPanier,
+                    anneeFiscale:         declaration?.annee ? Number(declaration.annee) : null,
+                    structureFiscale:     declaration?.structure || "CDI YAOUNDE 1",
+                    montantAPayer:        montant,
+                    montantPaye:          0,
+                    statutPaiement:       "IN_PROGRESS",
+                    modePaiement:         operateur.label,
+                });
+                paiementIdRef.current = paiementCree?.idPaiement ?? paiementCree?.id ?? null;
+                console.log("[BD] Paiement IN_PROGRESS créé, id =", paiementIdRef.current);
+            } catch (dbErr) {
+                console.warn("[BD] Enregistrement initial échoué:", dbErr.message);
+            }
+
+            // ── Polling toutes les 5s (max 3 min) ─────────────────────────
+            const detailFinal = await pollStatutPaiement(
                 refPanier,
                 (detail) => {
                     if (stopPollRef.current) return;
@@ -183,20 +202,76 @@ export default function ModalPaiement({ declaration, contribuable, onClose, onSu
                 { intervalMs: 5_000, timeoutMs: 180_000 }
             );
 
-            // Succès
             if (!stopPollRef.current) {
-                const final = await import("../../lib/api/harmonyPaiementApi").then(m => m.getDetailPanier(refPanier));
-                setDetailPanier(final);
-                setEtape(ETAPES.SUCCES);
-                if (onSuccess) onSuccess({ referencePanier: refPanier, ...final });
+                setDetailPanier(detailFinal);
+
+                const statutFinal = detailFinal?.statut;
+                const isSuccess   = statutFinal === 1 || ["1", "SUCCESSFUL", "PAYE", "PAYÉ"].includes(String(statutFinal).toUpperCase());
+                const isFailed    = statutFinal === 2 || ["2", "FAILED"].includes(String(statutFinal).toUpperCase());
+                const isExpired   = statutFinal === 4 || String(statutFinal).toUpperCase() === "EXPIRED";
+
+                console.log("[Paiement] statut final:", statutFinal, "| isSuccess:", isSuccess, "| isFailed:", isFailed);
+
+                if (isSuccess) {
+                    // ── Mise à jour BD → SUCCESS ──────────────────────────
+                    const refFinal = detailFinal?.referencePaiement || refPanier;
+                    if (paiementIdRef.current) {
+                        try {
+                            await updatePaiement(paiementIdRef.current, {
+                                statutPaiement:    "SUCCESS",
+                                montantPaye:       montant,
+                                referencePaiement: refFinal,
+                                payeLe:            new Date().toISOString(),
+                            });
+                            console.log("[BD] Paiement mis à jour → SUCCESS");
+                        } catch (e) {
+                            console.warn("[BD] Mise à jour SUCCESS échouée:", e.message);
+                        }
+                    } else {
+                        try {
+                            await createPaiement({
+                                referenceDeclaration: reference,
+                                referencePaiement:    refFinal,
+                                anneeFiscale:         declaration?.annee ? Number(declaration.annee) : null,
+                                structureFiscale:     declaration?.structure || "CDI YAOUNDE 1",
+                                montantAPayer:        montant,
+                                montantPaye:          montant,
+                                statutPaiement:       "SUCCESS",
+                                modePaiement:         operateur.label,
+                                payeLe:               new Date().toISOString(),
+                            });
+                        } catch (e) {
+                            console.warn("[BD] Secours SUCCESS échoué:", e.message);
+                        }
+                    }
+                    setEtape(ETAPES.SUCCES);
+                    if (onSuccess) onSuccess({ referencePanier: refPanier, ...detailFinal });
+
+                } else {
+                    // ── Paiement refusé ou expiré ─────────────────────────
+                    if (paiementIdRef.current) {
+                        try { await updatePaiement(paiementIdRef.current, { statutPaiement: "FAILED" }); } catch (_) {}
+                    }
+                    const msg = isExpired
+                        ? "Le délai de paiement a expiré. Veuillez réessayer."
+                        : "Le paiement a été refusé par l'opérateur.";
+                    setEchecMsg(msg);
+                    setEtape(ETAPES.ECHEC);
+                }
             }
         } catch (e) {
+            // ── Mise à jour BD → FAILED ───────────────────────────────────
+            if (paiementIdRef.current) {
+                try {
+                    await updatePaiement(paiementIdRef.current, { statutPaiement: "FAILED" });
+                } catch (_) {}
+            }
             setEchecMsg(e.message || "Une erreur est survenue lors du paiement.");
             setEtape(ETAPES.ECHEC);
         }
     };
 
-    const opSelecte = OPERATEURS.find(o => o.code === operateur?.code);
+    const opSelecte  = OPERATEURS.find(o => o.code === operateur?.code);
     const fmtMontant = montant.toLocaleString("fr-FR") + " FCFA";
 
     return (
@@ -257,15 +332,13 @@ export default function ModalPaiement({ declaration, contribuable, onClose, onSu
                     {/* ──────── ÉTAPE SAISIE ──────── */}
                     {etape === ETAPES.SAISIE && (
                         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                            {/* Résumé déclaration */}
                             <ResumeTransaction lignes={[
-                                ["Déclaration",    declaration?.reference || "—"],
-                                ["Année fiscale",  declaration?.annee     || "—"],
-                                ["NIU",            niu                    || "—"],
-                                ["Montant à payer",fmtMontant             ],
+                                ["Déclaration",     declaration?.reference || "—"],
+                                ["Année fiscale",   declaration?.annee     || "—"],
+                                ["NIU",             niu                    || "—"],
+                                ["Montant à payer", fmtMontant              ],
                             ]} />
 
-                            {/* Sélection opérateur */}
                             <div>
                                 <p style={{ fontSize: 13, fontWeight: 700, color: C.textDark, margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                                     Choisir l'opérateur
@@ -278,11 +351,10 @@ export default function ModalPaiement({ declaration, contribuable, onClose, onSu
                                     ))}
                                 </div>
                                 {erreurs.operateur && (
-                                    <p style={{ fontSize: 12, color: "#EF4444", margin: "6px 0 0" }}>⚠ {erreurs.operateur}</p>
+                                    <p style={{ fontSize: 12, color: "#EF4444", margin: "6px 0 0" }}>[!] {erreurs.operateur}</p>
                                 )}
                             </div>
 
-                            {/* Numéro de compte */}
                             {operateur && (
                                 <div>
                                     <Input
@@ -293,7 +365,7 @@ export default function ModalPaiement({ declaration, contribuable, onClose, onSu
                                         error={!!erreurs.numero}
                                     />
                                     {erreurs.numero && (
-                                        <p style={{ fontSize: 12, color: "#EF4444", margin: "4px 0 0" }}>⚠ {erreurs.numero}</p>
+                                        <p style={{ fontSize: 12, color: "#EF4444", margin: "4px 0 0" }}>[!] {erreurs.numero}</p>
                                     )}
                                     <p style={{ fontSize: 11, color: "#9CA3AF", margin: "6px 0 0" }}>
                                         Entrez le numéro associé à votre compte {operateur.label} (sans espaces ni +237)
@@ -302,10 +374,9 @@ export default function ModalPaiement({ declaration, contribuable, onClose, onSu
                             )}
 
                             {erreurs.montant && (
-                                <p style={{ fontSize: 12, color: "#EF4444" }}>⚠ {erreurs.montant}</p>
+                                <p style={{ fontSize: 12, color: "#EF4444" }}>[!] {erreurs.montant}</p>
                             )}
 
-                            {/* Bouton payer */}
                             <button onClick={handlePayer}
                                     style={{
                                         background: C.orange, color: "#fff", border: "none",
@@ -340,11 +411,11 @@ export default function ModalPaiement({ declaration, contribuable, onClose, onSu
                             />
                             {referencePanier && (
                                 <ResumeTransaction lignes={[
-                                    ["Réf. panier",   referencePanier],
-                                    ["Opérateur",     opSelecte?.label || "—"],
-                                    ["Numéro",        numero],
-                                    ["Montant",       fmtMontant],
-                                    ["Statut",        detailPanier?.statutLabel || "EN ATTENTE"],
+                                    ["Réf. panier",  referencePanier],
+                                    ["Opérateur",    opSelecte?.label || "—"],
+                                    ["Numéro",       numero],
+                                    ["Montant",      fmtMontant],
+                                    ["Statut",       detailPanier?.statutLabel || "EN ATTENTE"],
                                 ]} />
                             )}
                             <p style={{ fontSize: 12, color: "#9CA3AF", textAlign: "center", margin: 0 }}>
@@ -369,15 +440,18 @@ export default function ModalPaiement({ declaration, contribuable, onClose, onSu
                                 </div>
                                 <p style={{ fontSize: 17, fontWeight: 700, color: "#15803D", margin: "0 0 4px" }}>Paiement confirmé !</p>
                                 <p style={{ fontSize: 13, color: "#166534", margin: 0 }}>Votre déclaration a été réglée avec succès.</p>
+                                <p style={{ fontSize: 12, color: "#166534", margin: "6px 0 0" }}>
+                                    ✅ Ce paiement a été enregistré dans la <strong>Liste des Paiements</strong>.
+                                </p>
                             </div>
 
                             {detailPanier && (
                                 <ResumeTransaction lignes={[
-                                    ["Réf. panier",     detailPanier.referencePanier || referencePanier],
-                                    ["Réf. paiement",   detailPanier.referencePaiement || "—"],
-                                    ["Opérateur",       opSelecte?.label || "—"],
-                                    ["Montant payé",    (detailPanier.montantAPayer || montant).toLocaleString("fr-FR") + " FCFA"],
-                                    ["Structure",       detailPanier.structureImpot  || "CDI YAOUNDE 2"],
+                                    ["Réf. panier",    detailPanier.referencePanier   || referencePanier],
+                                    ["Réf. paiement",  detailPanier.referencePaiement || "—"],
+                                    ["Opérateur",      opSelecte?.label               || "—"],
+                                    ["Montant payé",   (detailPanier.montantAPayer || montant).toLocaleString("fr-FR") + " FCFA"],
+                                    ["Structure",      detailPanier.structureImpot    || "CDI YAOUNDE 2"],
                                 ]} />
                             )}
 
@@ -407,7 +481,7 @@ export default function ModalPaiement({ declaration, contribuable, onClose, onSu
                             </div>
 
                             <div style={{ display: "flex", gap: 10 }}>
-                                <button onClick={() => { setEtape(ETAPES.SAISIE); setErreurs({}); setEchecMsg(""); }}
+                                <button onClick={() => { setEtape(ETAPES.SAISIE); setErreurs({}); setEchecMsg(""); paiementIdRef.current = null; }}
                                         style={{
                                             flex: 1, background: C.white, color: C.orange,
                                             border: `2px solid ${C.orange}`, borderRadius: 8,

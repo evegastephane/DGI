@@ -7,13 +7,13 @@ import { ChevDown, ChevUp } from "../components/ui/Icons";
 
 // ─── Options filtres ──────────────────────────────────────────────────────
 const STATUT_OPTIONS = [
-    { value: "IN_PROGRESS", label: "INITIÉ"   },
-    { value: "SUCCESS",     label: "SUCCESS"  },
-    { value: "FAILED",      label: "FAILED"   },
-    { value: "PENDING",     label: "PENDING"  },
-    { value: "PAID",        label: "PAID"     },
-    { value: "REJECTED",    label: "REJECTED" },
-    { value: "PARTIAL",     label: "PARTIAL"  },
+    { value: "IN_PROGRESS", label: "PAIEMENT INITIE" },
+    { value: "SUCCESS",     label: "ABOUTI"           },
+    { value: "FAILED",      label: "ECHOUE"           },
+    { value: "PENDING",     label: "EN ATTENTE"       },
+    { value: "PAID",        label: "PAYE"             },
+    { value: "REJECTED",    label: "REJETE"           },
+    { value: "PARTIAL",     label: "PARTIEL"          },
 ];
 
 const EXERCICE_OPTIONS = ["2025", "2024", "2023", "2022"];
@@ -114,20 +114,23 @@ function OutlinedInput({ label, value, onClear, onClick, open, children }) {
 function Badge({ statut }) {
     // Clés en minuscules ET en majuscules pour compatibilité backend/frontend
     const map = {
-        // Nouveaux statuts paiement mobile
-        "IN_PROGRESS":   { label: "INITIÉ",   bg: "#FEF3C7", color: "#D97706" },
-        "SUCCESS":       { label: "SUCCESS",  bg: "#DCFCE7", color: "#16A34A" },
-        "FAILED":        { label: "FAILED",   bg: "#FEE2E2", color: "#DC2626" },
+        // Statuts paiement mobile
+        "IN_PROGRESS":   { label: "PAIEMENT INITIE",  bg: "#FEF3C7", color: "#D97706" },
+        "SUCCESS":       { label: "ABOUTI",            bg: "#DCFCE7", color: "#16A34A" },
+        "FAILED":        { label: "ECHOUE",            bg: "#FEE2E2", color: "#DC2626" },
         // Anciens statuts backend
-        "PAID":          { label: "PAID",     bg: "#DCFCE7", color: "#16A34A" },
-        "PENDING":       { label: "PENDING",  bg: "#FEF9C3", color: "#92400E" },
-        "REJECTED":      { label: "REJECTED", bg: "#FEE2E2", color: "#DC2626" },
-        "PARTIAL":       { label: "PARTIAL",  bg: "#DBEAFE", color: "#1D4ED8" },
+        "PAID":          { label: "PAYE",              bg: "#DCFCE7", color: "#16A34A" },
+        "PENDING":       { label: "EN ATTENTE",        bg: "#FEF9C3", color: "#92400E" },
+        "REJECTED":      { label: "REJETE",            bg: "#FEE2E2", color: "#DC2626" },
+        "PARTIAL":       { label: "PARTIEL",           bg: "#DBEAFE", color: "#1D4ED8" },
         // Formes FR (legacy)
-        "paye":          { label: "PAYÉ",     bg: "#DCFCE7", color: "#16A34A" },
-        "en_attente":    { label: "PENDING",  bg: "#FEF9C3", color: "#92400E" },
-        "partiel":       { label: "PARTIAL",  bg: "#DBEAFE", color: "#1D4ED8" },
-        "rejete":        { label: "REJECTED", bg: "#FEE2E2", color: "#DC2626" },
+        "paye":          { label: "PAYE",              bg: "#DCFCE7", color: "#16A34A" },
+        "en_attente":    { label: "EN ATTENTE",        bg: "#FEF9C3", color: "#92400E" },
+        "partiel":       { label: "PARTIEL",           bg: "#DBEAFE", color: "#1D4ED8" },
+        "rejete":        { label: "REJETE",            bg: "#FEE2E2", color: "#DC2626" },
+        // Backend legacy
+        "EFFECTUE":      { label: "EFFECTUE",          bg: "#DCFCE7", color: "#16A34A" },
+        "INITIE":        { label: "PAIEMENT INITIE",   bg: "#FEF3C7", color: "#D97706" },
     };
     const s = map[statut] ?? { label: statut?.toUpperCase() ?? "—", bg: "#F3F4F6", color: "#6B7280" };
     return (
@@ -198,7 +201,7 @@ function ManageColumnsModal({ allColumns, hiddenCols, onToggle, onClose }) {
             }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid ${C.border}` }}>
                     <span style={{ fontWeight: 700, fontSize: 15, color: C.textDark }}>Gérer les colonnes</span>
-                    <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: C.textGrey }}>✕</button>
+                    <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: C.textGrey }}>X</button>
                 </div>
                 <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
                     {allColumns.map((col) => (
@@ -258,6 +261,27 @@ export default function PageListeDesPaiements() {
             .catch(console.error)
             .finally(() => setLoading(false));
     }, []);
+
+    // ── Auto-rafraîchissement si des paiements sont IN_PROGRESS ──
+    // La liste se met à jour toutes les 8s tant qu'un paiement est en cours
+    useEffect(() => {
+        const hasInProgress = paiementsFiltres.some(
+            (p) => p.statutPaiement === "IN_PROGRESS" || p.statut === "INITIE"
+        );
+        if (!hasInProgress) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const data = await getPaiements();
+                setPaiementsFiltres(data);
+                setTotalPaiements(data.length);
+            } catch (e) {
+                console.error("Auto-refresh erreur:", e);
+            }
+        }, 8000);
+
+        return () => clearInterval(interval);
+    }, [paiementsFiltres]);
 
     const toggleStatut  = (val) => setStatutsSelec((p) => p.includes(val) ? p.filter((s) => s !== val) : [...p, val]);
     const toggleTout    = () => setStatutsSelec([]);
@@ -441,7 +465,7 @@ export default function PageListeDesPaiements() {
                                 onMouseEnter={(e) => (e.currentTarget.style.background = C.orangeBg)}
                                 onMouseLeave={(e) => (e.currentTarget.style.background = C.white)}
                             >
-                                🔍 RECHERCHER
+                                RECHERCHER
                             </button>
                         </div>
                     )}
@@ -449,7 +473,16 @@ export default function PageListeDesPaiements() {
 
                 {/* ── Compteur rows ── */}
                 <div style={{ background: "#F3F4F6", padding: "10px 28px", textAlign: "right", fontSize: 13, color: C.textGrey }}>
-                    {loading ? "Chargement..." : `showing ${sorted.length} of ${totalPaiements} rows`}
+                    {loading ? "Chargement..." : (
+                        <span>
+                            {sorted.length} sur {totalPaiements} paiements
+                            {paiementsFiltres.some(p => p.statutPaiement === "IN_PROGRESS" || p.statut === "INITIE") && (
+                                <span style={{ marginLeft: 12, color: "#D97706", fontWeight: 600 }}>
+                                    — Actualisation automatique en cours...
+                                </span>
+                            )}
+                        </span>
+                    )}
                 </div>
 
                 {/* ── Tableau ── */}

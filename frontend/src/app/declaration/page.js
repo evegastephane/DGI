@@ -3,11 +3,11 @@
 import { useState } from "react";
 import C from "../lib/utils/colors";
 import { Tabs } from "../components/ui/Widgets";
-import TabEtablissements    from "../../app/components/declarations/TabEtablissements";
-import TabRecapitulatif     from "../../app/components/declarations/TabRecapitulatif";
-import TabAjoutEtablissement from "../../app/components/declarations/TabAjoutEtablissement";
-import { ArrowL, ArrowR }   from "../components/ui/Icons";
+import TabEtablissements     from "../../app/components/declarations/TabEtablissements";
+import TabRecapitulatif      from "../../app/components/declarations/TabRecapitulatif";
+import { ArrowL, ArrowR }    from "../components/ui/Icons";
 
+// ─── Step 1 — exporté pour src/app/page.js ───────────────────────────────────
 export function PageStep1({ setPage, setDeclarationContext }) {
     const [exercice, setExercice] = useState("2025");
 
@@ -21,7 +21,7 @@ export function PageStep1({ setPage, setDeclarationContext }) {
             <div style={{ background: C.white, borderRadius: 8, padding: "20px 24px", boxShadow: C.shadow }}>
                 <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Nouvelle Déclaration</h1>
                 <p style={{ fontSize: 13, color: C.textGrey, margin: "4px 0 0" }}>
-                    Sélectionnez l'exercice fiscal pour commencer
+                    Sélectionnez l&apos;exercice fiscal pour commencer
                 </p>
             </div>
 
@@ -68,16 +68,16 @@ export function PageStep1({ setPage, setDeclarationContext }) {
     );
 }
 
-// ─── Onglets — on ajoute "ajout_etablissement" sans toucher aux autres ──────
+// ─── Onglets ──────────────────────────────────────────────────────────────────
 const ONGLETS = [
-    { key: "etablissements",     label: "Etablissements"      },
-    { key: "recapitulatif",      label: "Recapitulatif"       },
+    { key: "etablissements", label: "Etablissements" },
+    { key: "recapitulatif",  label: "Recapitulatif"  },
 ];
 
+// ─── Step 2 — exporté pour src/app/page.js ───────────────────────────────────
 export function PageStep2({ setPage, declarationContext, onDeclarationSoumise, draftAEditer }) {
     const [ongletActif,   setOngletActif]   = useState("etablissements");
     const [lignes,        setLignes]        = useState([]);
-    // Si on édite un draft existant, on initialise idDeclaration avec son id
     const [idDeclaration, setIdDeclaration] = useState(draftAEditer?.id || null);
 
     return (
@@ -94,8 +94,6 @@ export function PageStep2({ setPage, declarationContext, onDeclarationSoumise, d
                     <Tabs tabs={ONGLETS} active={ongletActif} onChange={setOngletActif} />
                 </div>
                 <div style={{ padding: "0 24px 24px" }}>
-
-                    {/* Onglet existant — inchangé */}
                     {ongletActif === "etablissements" && (
                         <TabEtablissements
                             lignes={lignes}
@@ -106,8 +104,6 @@ export function PageStep2({ setPage, declarationContext, onDeclarationSoumise, d
                             onSuivant={() => setOngletActif("recapitulatif")}
                         />
                     )}
-
-                    {/* Onglet existant — inchangé */}
                     {ongletActif === "recapitulatif" && (
                         <TabRecapitulatif
                             lignes={lignes}
@@ -131,5 +127,29 @@ export function PageStep2({ setPage, declarationContext, onDeclarationSoumise, d
                 </button>
             </div>
         </main>
+    );
+}
+
+// ─── export default — obligatoire pour Next.js App Router ────────────────────
+export default function DeclarationPage() {
+    const [page,               setPage]               = useState("step1");
+    const [declarationContext, setDeclarationContext] = useState(null);
+
+    return (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            {page === "step1" && (
+                <PageStep1
+                    setPage={setPage}
+                    setDeclarationContext={setDeclarationContext}
+                />
+            )}
+            {page === "step2" && (
+                <PageStep2
+                    setPage={setPage}
+                    declarationContext={declarationContext}
+                    onDeclarationSoumise={() => setPage("step1")}
+                />
+            )}
+        </div>
     );
 }
