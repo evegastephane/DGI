@@ -42,7 +42,7 @@ const statutLabel = (statut) => {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const S = {
     page: {
-        maxWidth: 1200,
+        minWidth: "100%",
         margin: '0 auto',
         padding: '24px 32px 80px',
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
@@ -57,6 +57,22 @@ const S = {
         boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
         padding: 24,
     },
+    cardstat: {
+        background: '#fff',
+        borderRadius: 8,
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+        padding: 24,
+        minWidth: 450,
+    },
+    cardlistedpr: {
+        background: '#fff',
+        borderRadius: 8,
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+        padding: 24,
+        minWidth: "206.5%",
+    },
     statCard: {
         background: '#fff',
         borderRadius: 8,
@@ -68,6 +84,11 @@ const S = {
     grid2: {
         display: 'grid',
         gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: 20,
+    },
+    grid3: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
         gap: 20,
     },
     grid4: {
@@ -99,6 +120,25 @@ const S = {
         gap: 8,
         boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
         transition: 'background 0.15s',
+    },
+    btnconsdec: {
+        background: '#f39200',
+        color: '#fff',
+        border: 'none',
+        borderRadius: 6,
+        padding: '10px 20px',
+        fontSize: 14,
+        fontWeight: 700,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+        transition: 'background 0.15s',
+        width: 260,
+        height: 45,
+        position: 'relative',
+        left: "75.5%",
     },
     linkBtn: {
         background: 'none',
@@ -407,26 +447,24 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
             {/* ── Header ─────────────────────────────────────────────────────── */}
             <div style={{ ...S.between, marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                    <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, color: '#001f3f', letterSpacing: '-0.5px' }}>
+                    <h1 style={{ fontSize: 23, fontWeight: 700, margin: 0, color: 'black', letterSpacing: '-0.5px' }}>
                         Tableau de Bord
                     </h1>
-                    <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-                        Vue d'ensemble de votre situation fiscale
-                    </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ position: 'relative' }}>
                         <label style={{
-                            position: 'absolute', top: -9, left: 12, fontSize: 11,
-                            color: '#6b7280', background: '#f4f6f9', padding: '0 4px', zIndex: 1, fontWeight: 500
+                            position: 'absolute', top: 6, left: 12, fontSize: 11,
+                            color: 'black', background: '#f4f6f9', padding: '0 4px', zIndex: 1, fontWeight: 500
                         }}>Exercice</label>
                         <select
                             value={exercice}
                             onChange={(e) => setExercice(e.target.value)}
                             style={{
-                                border: '1px solid #d1d5db', borderRadius: 12, padding: '10px 16px',
-                                fontSize: 14, fontWeight: 500, background: '#fff', minWidth: 180,
-                                cursor: 'pointer', outline: 'none', color: '#111827',
+                                border: '1px solid #d1d5db', borderRadius: 4, padding: '10px 16px',
+                                fontSize: 12, fontWeight: 500, background: 'transparent', minWidth: 215,
+                                cursor: 'pointer', outline: 'none', color: 'black', height: 50, position: 'relative',
+                                top: 15,
                             }}
                         >
                             {[2025, 2024, 2023, 2022].map(y => (
@@ -434,25 +472,27 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
                             ))}
                         </select>
                     </div>
-                    <button style={S.btn}>
-                        <Eye size={16} />
-                        Consulter votre Déclaration
-                    </button>
                 </div>
+            </div>
+            <div style={{position: 'relative', minWidth: '100%', justifyContent: 'flex-end', alignItems: 'right'}}>
+                <button style={S.btnconsdec}>
+                    <Eye size={16} />
+                    Consulter votre Déclaration
+                </button>
             </div>
 
             {/* ── Bannière info ───────────────────────────────────────────────── */}
             {infoBannerVisible && (
                 <div style={{
-                    background: '#fce8ce', border: '1px solid #f8d099', borderRadius: 8,
-                    padding: '20px', display: 'flex', alignItems: 'flex-start', gap: 14,
+                    background: '#F9D192', border: '1px solid #f8d099', borderRadius: 6,
+                    padding: '13px 13px', display: 'flex', alignItems: 'flex-start', gap: 14,
                     position: 'relative', marginBottom: 24,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)', top: 15,
                 }}>
                     <div style={{
                         width: 42, height: 42, borderRadius: '50%', background: '#c88d3d',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        color: '#fff', fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: 22, fontWeight: 400,
+                        color: '#F9D192', fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 400,
                     }}>
                         i
                     </div>
@@ -478,7 +518,7 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
             )}
 
             {/* ── 2 Stats Cards (DPR réelles) ─────────────────────────────────── */}
-            <div style={{ ...S.grid2, marginBottom: 24 }}>
+            <div style={{ ...S.grid2, marginBottom: 24, marginTop: 20 }}>
                 <StatCard
                     icon={Folder}
                     iconBg="#dbeafe"
@@ -500,10 +540,10 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
             </div>
 
             {/* ── Section milieu : Donut + Liste DPR ─────────────────────────── */}
-            <div style={{ ...S.grid2, marginBottom: 24 }}>
+            <div style={{ ...S.grid3, marginBottom: 24, minHeight: 420 }}>
 
                 {/* Statut des Avis — Donut DYNAMIQUE */}
-                <div style={S.card}>
+                <div style={S.cardstat}>
                     <div style={{ ...S.between, marginBottom: 20 }}>
                         <div>
                             <h3 style={{ fontSize: 15, fontWeight: 700, color: '#111827', margin: 0 }}>
@@ -552,7 +592,7 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
                 </div>
 
                 {/* Liste des DPR */}
-                <div style={{ ...S.card, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ ...S.cardlistedpr, display: 'flex', flexDirection: 'column' }}>
                     <SectionHeader title="Liste des déclarations générées" count={dprs.length} />
                     <div style={{ flex: 1, overflowY: 'auto', maxHeight: 280 }}>
                         {dprs.length === 0 ? (
@@ -578,7 +618,7 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
                     </div>
                     <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f3f4f6', display: 'flex', justifyContent: 'flex-end' }}>
                         <button style={S.linkBtn} onClick={() => setPage && setPage('mesDeclarations')}>
-                            VOIR PLUS <ChevronDown size={14} />
+                            VOIR PLUS
                         </button>
                     </div>
                 </div>
@@ -588,7 +628,7 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
             <div style={S.grid2}>
 
                 {/* Liste des Avis */}
-                <div style={{ ...S.card, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ ...S.card, display: 'flex', flexDirection: 'column', minHeight: 400 }}>
                     <SectionHeader title="Liste des Avis" count={avisList.length} />
                     <div style={{ flex: 1, overflowY: 'auto', maxHeight: 280 }}>
                         {avisList.length === 0 ? (
@@ -626,7 +666,7 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
                     </div>
                     <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f3f4f6', display: 'flex', justifyContent: 'flex-end' }}>
                         <button style={S.linkBtn} onClick={() => setPage && setPage('avis')}>
-                            VOIR PLUS <ChevronDown size={14} />
+                            VOIR PLUS
                         </button>
                     </div>
                 </div>
@@ -676,7 +716,7 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
                     </div>
                     <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f3f4f6', display: 'flex', justifyContent: 'flex-end' }}>
                         <button style={S.linkBtn} onClick={() => setPage && setPage('amr')}>
-                            VOIR PLUS <ChevronDown size={14} />
+                            VOIR PLUS
                         </button>
                     </div>
                 </div>
