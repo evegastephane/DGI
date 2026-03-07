@@ -95,18 +95,18 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
             {/* ── Bloc profil orange — nouveau design ── */}
             <div style={{
                 background: C.orange, padding: "24px 20px",
-                margin: "12px 12px 16px", borderRadius: 12,
+                margin: "4px 4px 16px", borderRadius: 7,
                 boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
             }}>
                 {/* Avatar */}
                 <div style={{ position: "relative" }}>
                     <div style={{
-                        width: 64, height: 64, borderRadius: "50%",
-                        background: "rgba(0,0,0,0.2)",
+                        width: 55, height: 55, borderRadius: "50%",
+                        background: "#BDBDBD",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         color: C.white, fontWeight: 700, fontSize: 22,
-                        border: "2px solid rgba(255,255,255,0.5)",
+                        border: "none",
                     }}>
                         {loadingProfil ? "··" : initiales}
                     </div>
@@ -130,12 +130,12 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
                                 onClick={() => setProfileExpanded(!profileExpanded)}
                                 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer" }}
                             >
-                                <p style={{ color: C.white, fontWeight: 700, margin: 0, fontSize: 15, letterSpacing: 0.5 }}>
+                                <p style={{ color: C.white, fontWeight: 700, margin: 0, fontSize: 15, letterSpacing: 0 }}>
                                     {profil?.NIU ?? "—"}
                                 </p>
                                 {profileExpanded ? <ChevUp /> : <ChevDown />}
                             </div>
-                            <p style={{ color: "rgba(255,255,255,0.9)", margin: "2px 0 0", fontSize: 11, letterSpacing: 1, textTransform: "uppercase" }}>
+                            <p style={{ color: "rgba(255,255,255,0.9)", margin: "2px 0 0", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600 }}>
                                 {nomComplet || "—"}
                             </p>
                         </>
@@ -144,10 +144,10 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
 
                 {/* Badge rôle */}
                 <button style={{
-                    border: `1.5px solid rgba(255,255,255,0.8)`, color: C.white,
+                    border: `1px solid rgba(255,255,255,0.8)`, color: C.white,
                     background: "transparent", borderRadius: 6,
-                    padding: "8px 0", fontSize: 13, fontWeight: 700,
-                    letterSpacing: 1.5, cursor: "default", width: "100%", textAlign: "center",
+                    padding: "13px 13px 13px", fontSize: 14, fontWeight: 500,
+                    letterSpacing: 1, cursor: "default", width: "100%", textAlign: "center",
                 }}>
                     CONTRIBUABLE
                 </button>
