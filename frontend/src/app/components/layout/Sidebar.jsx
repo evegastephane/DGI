@@ -51,34 +51,34 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
     // ── Styles navigation — nouveau design ────────────────────────────────────
     const navBtn = (isActive) => ({
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        width: "calc(100% - 16px)", margin: "0 8px",
-        padding: "12px 12px", border: "none", cursor: "pointer",
-        borderRadius: 8, textAlign: "left", fontSize: 15,
+        width: "calc(100% - 11px)", margin: "0 8px",
+        padding: "10px 8px", border: "none", cursor: "pointer",
+        borderRadius: 6, textAlign: "left", fontSize: 14,
         background: isActive ? C.orange : "transparent",
-        color:      isActive ? C.white  : "#374151",
+        color:      isActive ? C.white  : "black",
         fontWeight: isActive ? 600 : 400,
-        boxShadow:  isActive ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+        boxShadow:  isActive ? "0 4px 4px rgba(0,0,0,0.12)" : "none",
         transition: "background 0.15s",
     });
 
     const navBtnPlain = (isActive) => ({
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        width: "100%",
-        padding: "12px 24px", border: "none", cursor: "pointer",
-        borderRadius: 0, textAlign: "left", fontSize: 15,
+        width: "calc(100% - 11px)", margin: "0 8px",
+        padding: "10px 8px", border: "none", cursor: "pointer",
+        borderRadius: 6, textAlign: "left", fontSize: 14,
         background: isActive ? C.orange : "transparent",
-        color:      isActive ? C.white  : "#374151",
+        color:      isActive ? C.white  : "black",
         fontWeight: isActive ? 600 : 400,
         transition: "background 0.15s",
     });
 
     const subBtn = (isActive) => ({
-        display: "block", width: "100%", padding: "10px 24px 10px 56px",
-        border: "none", cursor: "pointer", textAlign: "left", fontSize: 14,
-        borderRadius: 0,
-        background: isActive ? C.orange : "transparent",
-        color:      isActive ? C.white  : "#4B5563",
-        fontWeight: isActive ? 600 : 400,
+        display: "block", width: "calc(100% - 11px)", padding: "9px 40px",
+        border: "none", cursor: "pointer", textAlign: "left", fontSize: 13.5,
+        margin: "0 8px",
+        borderRadius: 6,
+        background: isActive ? C.orangesub : "transparent",
+        color:      "black",
         transition: "background 0.15s",
     });
 
@@ -186,11 +186,12 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
                 </button>
                 {irppOpen && (
                     <>
-                        <button style={subBtn(onDeclaration)}              onClick={() => setPage("declaration")}
+                        <button style={subBtn(onDeclaration)} onClick={() => setPage("declaration")}
                                 onMouseEnter={(e) => { if (!onDeclaration) e.currentTarget.style.background = "#f9fafb"; }}
                                 onMouseLeave={(e) => { if (!onDeclaration) e.currentTarget.style.background = "transparent"; }}>Nouvelle Déclaration</button>
                         <button style={subBtn(page === "mesDeclarations")} onClick={() => setPage("mesDeclarations")}
-                                onMouseEnter={(e) => { if (page !== "mesDeclarations") e.currentTarget.style.background = "#f9fafb"; }}
+                                onMouseEnter={(e) => { if (page !== "mesDeclarations") e.currentTarget.style.background = "#f9fafb";}}
+                                onMouseEnter={(e) => { if (page  === "mesDeclarations") e.currentTarget.style.background = "#transparent"; }}
                                 onMouseLeave={(e) => { if (page !== "mesDeclarations") e.currentTarget.style.background = "transparent"; }}>Mes Déclarations</button>
                         <button style={subBtn(page === "authentifier")}    onClick={() => setPage("authentifier")}
                                 onMouseEnter={(e) => { if (page !== "authentifier") e.currentTarget.style.background = "#f9fafb"; }}
@@ -207,21 +208,21 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><CardIcon /> Liste des Paiements</span>
                 </button>
 
-                <button style={navBtnPlain(page === "avis")} onClick={() => setPage("avis")}
+                <button style={navBtn(page === "avis")} onClick={() => setPage("avis")}
                         onMouseEnter={(e) => { if (page !== "avis") e.currentTarget.style.background = "#f9fafb"; }}
                         onMouseLeave={(e) => { if (page !== "avis") e.currentTarget.style.background = "transparent"; }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><ReceiptIcon /> Liste des Avis</span>
                 </button>
 
-                <button style={navBtnPlain(page === "AMR")} onClick={() => setPage("AMR")}
+                <button style={navBtn(page === "AMR")} onClick={() => setPage("AMR")}
                         onMouseEnter={(e) => { if (page !== "AMR") e.currentTarget.style.background = "#f9fafb"; }}
                         onMouseLeave={(e) => { if (page !== "AMR") e.currentTarget.style.background = "transparent"; }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><ListIcon /> Liste des AMRs</span>
                 </button>
 
                 {/* Notifications — sous-menu */}
-                <button style={navBtn(page === "notifications" || notifOpen)} onClick={() => setNotifOpen(!notifOpen)}
-                        onMouseEnter={(e) => { if (page !== "notifications") e.currentTarget.style.background = notifOpen ? C.orange : "#f9fafb"; }}
+                <button style={navBtnPlain(page === "notifications" || notifOpen)} onClick={() => setNotifOpen(!notifOpen)}
+                        onMouseEnter={(e) => { if (page !== "notifications") e.currentTarget.style.background = notifOpen ? C.orange : "#f9fafb";}}
                         onMouseLeave={(e) => { if (page !== "notifications") e.currentTarget.style.background = notifOpen ? C.orange : "transparent"; }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><BellIcon /> Notifications</span>
                     {notifOpen ? <ChevUp /> : <ChevDown />}
@@ -234,13 +235,13 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
                     </button>
                 )}
 
-                <button style={navBtnPlain(page === "Profile")} onClick={() => setPage("Profile")}
+                <button style={navBtn(page === "Profile")} onClick={() => setPage("Profile")}
                         onMouseEnter={(e) => { if (page !== "Profile") e.currentTarget.style.background = "#f9fafb"; }}
                         onMouseLeave={(e) => { if (page !== "Profile") e.currentTarget.style.background = "transparent"; }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><GearIcon /> Mon profil</span>
                 </button>
 
-                <button style={navBtnPlain(false)}
+                <button style={navBtn(false)}
                         onMouseEnter={(e) => (e.currentTarget.style.background = "#f9fafb")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><DocIcon /> Documents Fiscaux</span>
@@ -249,7 +250,7 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
                 {/* Séparateur */}
                 <div style={{ borderTop: `1px solid #e5e7eb`, margin: "8px 16px" }} />
 
-                <button style={{ ...navBtnPlain(false), color: "#ef4444" }}
+                <button style={{ ...navBtnPlain(false) }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><ExitIcon /> Déconnexion</span>

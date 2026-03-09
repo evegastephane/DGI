@@ -231,16 +231,13 @@ export default function PageMonProfil() {
 
             {/* ── Titre ─────────────────────────────────────────────────────── */}
             <div style={{
-                background: "#fff", marginTop: 20, marginLeft: 18, width: "96%",
-                padding: "20px 24px", borderRadius: 5, border: "1px solid #E5E7EB",
-                display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: "#F3F4F6", marginTop: 22, width: "100%",
+                padding: "20px 24px", border: "none",
+                display: "flex", textAlign: "center", justifyContent: "space-between",
             }}>
-                <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, color: C.textDark }}>
-                    Mon Profil
+                <h1 style={{ fontSize: 19, fontWeight: 700, color: C.textDark, position: "relative", textAlign: "center" }}>
+                    Mettre à jour les informations de votre profile
                 </h1>
-                <span style={{ fontSize: 13, color: C.textGrey }}>
-                    Gérez vos informations personnelles
-                </span>
             </div>
 
             <div style={{ padding: "24px 18px 60px", display: "flex", gap: 24, flexWrap: "wrap" }}>
@@ -256,27 +253,7 @@ export default function PageMonProfil() {
                         boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
                         border: "1px solid #E5E7EB",
                     }}>
-                        {/* En-tête du formulaire */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32 }}>
-                            <Avatar initiales={mockProfil.initiales ?? "??"} bg={couleur} />
-                            <div>
-                                <p style={{ fontSize: 18, fontWeight: 700, margin: 0, color: C.textDark }}>
-                                    {nomsComplets}
-                                </p>
-                                <p style={{ fontSize: 13, color: C.textGrey, margin: "4px 0 0" }}>
-                                    {structureFisc}
-                                </p>
-                                {centre && ROLE_BADGE[centre] && (
-                                    <span style={{
-                                        fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999,
-                                        background: ROLE_BADGE[centre].bg, color: ROLE_BADGE[centre].color,
-                                        display: "inline-block", marginTop: 6,
-                                    }}>
-                                        {ROLE_BADGE[centre].label}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
+
 
                         {loading ? (
                             <div style={{ textAlign: "center", padding: "40px 0", color: C.textGrey }}>
