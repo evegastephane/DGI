@@ -274,13 +274,8 @@ export default function MesDeclarations({ setPage, onModifierDraft }) {
     return (
         <main style={{ padding: "24px 28px 60px", flex: 1, background: C.bg }}>
             {/* ── En-tête ── */}
-            <div style={{ marginBottom: 24 }}>
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: C.textDark, margin: "0 0 4px" }}>
-                    Mes Déclarations
-                </h1>
-                <p style={{ fontSize: 13, color: C.textGrey, margin: 0 }}>
-                    Consultez, modifiez et soumettez vos déclarations de patente
-                </p>
+            <div style={{ background: C.white, marginTop:"20px", marginLeft: "18px", width:"96%", padding: "20px 16px", borderBottom: `1px solid #E5E7EB`, borderRadius:'5px', height: "60px" }}>
+                <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, color: C.textDark, padding: "0px 0px" }}>Liste des Paiements</h1>
             </div>
 
             <div style={{
