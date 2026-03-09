@@ -487,7 +487,7 @@ export default function PageListeDesPaiements() {
 
                 {/* ── Tableau ── */}
                 <div style={{ background: C.white, overflowX: "auto", width:"96%", marginLeft: "18px", border:'1px solid lightGray' }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900, minHeight: 350}}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900, marginBottom: 200}}>
                         <thead>
                         <tr>
                             {visibleColumns.map((col) => (
