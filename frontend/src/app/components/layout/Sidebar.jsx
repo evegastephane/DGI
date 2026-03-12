@@ -82,7 +82,22 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
         transition: "background 0.15s",
     });
 
-    const onDeclaration = page === "declaration" || page === "step2" || page === "ajoutEtablissement";
+    // BUG 1 FIX : onDeclaration couvre uniquement "Nouvelle Déclaration" et "step2"
+    // "mesDeclarations", "authentifier", "ajoutEtablissement" sont des sous-menus
+    // distincts et ne doivent pas activer le fond de "Déclaration Patente" en permanence.
+    const onDeclaration = page === "declaration" || page === "step2";
+
+    // Indique si l'un des sous-menus de "Déclaration Patente" est sélectionné
+    // → utilisé pour l'hover : on ne retire PAS le fond si un sous-menu est actif
+    const irppSubSelected =
+        page === "declaration"        ||
+        page === "step2"              ||
+        page === "mesDeclarations"    ||
+        page === "authentifier"       ||
+        page === "ajoutEtablissement";
+
+    // Indique si l'un des sous-menus de "Notifications" est sélectionné
+    const notifSubSelected = page === "notifications";
 
     return (
         <nav style={{
@@ -176,22 +191,34 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><DashIcon /> Tableau de Bord</span>
                 </button>
 
-                {/* Déclaration Patente — sous-menu */}
-                <button style={navBtnPlain(onDeclaration || page === "mesDeclarations" || page === "authentifier")}
-                        onClick={() => setIrppOpen(!irppOpen)}
-                        onMouseEnter={(e) => { if (!onDeclaration) e.currentTarget.style.background = "#f9fafb"; }}
-                        onMouseLeave={(e) => { if (!onDeclaration) e.currentTarget.style.background = "transparent"; }}>
+                {/* ── Déclaration Patente — sous-menu ──
+                    Background du parent :
+                    - Aucune couleur si aucun sous-menu sélectionné
+                    - Conserve son fond au survol si un sous-menu est sélectionné
+                    - Perd son fond si fermé et aucun sous-menu actif
+                */}
+                <button
+                    style={navBtnPlain(irppSubSelected)}
+                    onClick={() => setIrppOpen(!irppOpen)}
+                    onMouseEnter={(e) => {
+                        if (!irppSubSelected) e.currentTarget.style.background = "#f9fafb";
+                    }}
+                    onMouseLeave={(e) => {
+                        if (!irppSubSelected) e.currentTarget.style.background = "transparent";
+                    }}
+                >
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><TaskIcon /> Déclaration Patente</span>
                     {irppOpen ? <ChevUp /> : <ChevDown />}
                 </button>
                 {irppOpen && (
                     <>
+                        {/* BUG 2 FIX : subBtn(onDeclaration) couvre uniquement "declaration" et "step2",
+                            pas "ajoutEtablissement" */}
                         <button style={subBtn(onDeclaration)} onClick={() => setPage("declaration")}
                                 onMouseEnter={(e) => { if (!onDeclaration) e.currentTarget.style.background = "#f9fafb"; }}
                                 onMouseLeave={(e) => { if (!onDeclaration) e.currentTarget.style.background = "transparent"; }}>Nouvelle Déclaration</button>
                         <button style={subBtn(page === "mesDeclarations")} onClick={() => setPage("mesDeclarations")}
-                                onMouseEnter={(e) => { if (page !== "mesDeclarations") e.currentTarget.style.background = "#f9fafb";}}
-                                onMouseEnter={(e) => { if (page  === "mesDeclarations") e.currentTarget.style.background = "#transparent"; }}
+                                onMouseEnter={(e) => { if (page !== "mesDeclarations") e.currentTarget.style.background = "#f9fafb"; }}
                                 onMouseLeave={(e) => { if (page !== "mesDeclarations") e.currentTarget.style.background = "transparent"; }}>Mes Déclarations</button>
                         <button style={subBtn(page === "authentifier")}    onClick={() => setPage("authentifier")}
                                 onMouseEnter={(e) => { if (page !== "authentifier") e.currentTarget.style.background = "#f9fafb"; }}
@@ -220,10 +247,21 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><ListIcon /> Liste des AMRs</span>
                 </button>
 
-                {/* Notifications — sous-menu */}
-                <button style={navBtnPlain(page === "notifications" || notifOpen)} onClick={() => setNotifOpen(!notifOpen)}
-                        onMouseEnter={(e) => { if (page !== "notifications") e.currentTarget.style.background = notifOpen ? C.orange : "#f9fafb";}}
-                        onMouseLeave={(e) => { if (page !== "notifications") e.currentTarget.style.background = notifOpen ? C.orange : "transparent"; }}>
+                {/* ── Notifications — sous-menu ──
+                    BUG 3 FIX : même logique que Déclaration Patente.
+                    Background uniquement si un sous-menu (notifications) est sélectionné,
+                    pas au simple clic/ouverture du menu.
+                */}
+                <button
+                    style={navBtnPlain(notifSubSelected)}
+                    onClick={() => setNotifOpen(!notifOpen)}
+                    onMouseEnter={(e) => {
+                        if (!notifSubSelected) e.currentTarget.style.background = "#f9fafb";
+                    }}
+                    onMouseLeave={(e) => {
+                        if (!notifSubSelected) e.currentTarget.style.background = "transparent";
+                    }}
+                >
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><BellIcon /> Notifications</span>
                     {notifOpen ? <ChevUp /> : <ChevDown />}
                 </button>
@@ -246,9 +284,6 @@ export default function Sidebar({ page, setPage, setSidebarOpen }) {
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
                     <span style={{ display: "flex", alignItems: "center", gap: 10 }}><DocIcon /> Documents Fiscaux</span>
                 </button>
-
-                {/* Séparateur */}
-                <div style={{ borderTop: `1px solid #e5e7eb`, margin: "8px 16px" }} />
 
                 <button style={{ ...navBtnPlain(false) }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}

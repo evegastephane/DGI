@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import C from "../lib/utils/colors";
 import { getDeclarations, getDeclaration } from "../lib/api/declarationApi";
 import { getAvis, getContribuable, CURRENT_USER_ID } from "../lib/api/contribuableApi";
@@ -8,75 +8,119 @@ import { generateAvisPDF, downloadPDF } from "../lib/utils/generateAvisPDF";
 
 const TYPE_OPTIONS = ["AVIS", "ACCUSE"];
 
-// ─── Dropdown custom ───────────────────────────────────────────────────────
+// ─── Dropdown — style identique au screenshot ─────────────────────────────
+// Champ plat, bordure grise, label placeholder gris à gauche,
+// bordure + label orange quand ouvert/rempli, flèche ▼ à droite
 function SelectOutlined({ label, value, onChange, options }) {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
 
-    // Fermer en cliquant dehors
-    const handleBlur = () => setTimeout(() => setOpen(false), 150);
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", h);
+        return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    const isFilled = !!value;
+    const isActive = open || isFilled;
 
     return (
         <div ref={ref} style={{ position: "relative", width: "100%" }}>
-            <div
+            {/* Trigger — fieldset+legend pour vrai découpage de bordure */}
+            <fieldset
                 onClick={() => setOpen(!open)}
                 style={{
-                    border: `1.5px solid ${value ? C.orange : "#9ca3af"}`,
+                    position: "relative",
+                    border: `1.5px solid ${isActive ? C.orange : "#d1d5db"}`,
                     borderRadius: 4,
-                    padding: "16px 40px 6px 14px",
-                    background: C.white,
+                    height: 52,
+                    background: "transparent",
                     cursor: "pointer",
-                    minHeight: 54,
                     display: "flex",
                     alignItems: "center",
-                    position: "relative",
+                    padding: "0 40px 0 10px",
+                    userSelect: "none",
+                    margin: 0,
                 }}
-                onBlur={handleBlur}
-                tabIndex={0}
             >
-                {/* Label flottant */}
+                {/* Legend crée le vrai gap dans la bordure */}
+                <legend style={{
+                    padding: isActive ? "0 4px" : 0,
+                    fontSize: 11,
+                    lineHeight: 1,
+                    height: isActive ? "auto" : 0,
+                    overflow: "hidden",
+                    color: "transparent",
+                    transition: "all 0.15s",
+                    marginLeft: 6,
+                    whiteSpace: "nowrap",
+                    maxWidth: isActive ? 200 : 0,
+                }}>
+                    {label}
+                </legend>
+
+                {/* Label flottant — positionné au-dessus via la legend */}
                 <span style={{
                     position: "absolute",
-                    left: 12,
-                    top: value || open ? 5 : 18,
-                    fontSize: value || open ? 11 : 14,
-                    color: open ? C.orange : value ? C.orange : "#9ca3af",
+                    left: 14,
+                    top: isActive ? -10 : "50%",
+                    transform: isActive ? "none" : "translateY(-50%)",
+                    fontSize: isActive ? 11 : 14,
+                    color: isActive ? C.orange : "#9ca3af",
+                    background: "transparent",
+                    padding: "0 4px",
                     transition: "all 0.15s",
                     pointerEvents: "none",
-                    background: C.white,
-                    padding: "0 2px",
-                    fontFamily: "'Segoe UI', Arial, sans-serif",
+                    lineHeight: 1,
                 }}>
                     {label}
                 </span>
-                <span style={{ fontSize: 14, color: C.textDark }}>{value || ""}</span>
-                {/* Flèche */}
+
+                {/* Valeur sélectionnée */}
                 <span style={{
-                    position: "absolute", right: 12, top: "50%",
-                    transform: `translateY(-50%) ${open ? "rotate(180deg)" : ""}`,
-                    transition: "transform 0.15s", color: "#9ca3af", fontSize: 12,
-                }}>▼</span>
-            </div>
+                    fontSize: 14,
+                    color: isFilled ? "#111827" : "transparent",
+                }}>
+                    {isFilled ? value : "\u200b"}
+                </span>
+
+                {/* Flèche */}
+                <svg
+                    width="16" height="16" viewBox="0 0 24 24"
+                    fill="none" stroke="#9ca3af" strokeWidth="2"
+                    style={{
+                        position: "absolute", right: 12, top: "50%",
+                        transform: `translateY(-50%) ${open ? "rotate(180deg)" : ""}`,
+                        transition: "transform 0.15s", pointerEvents: "none",
+                    }}
+                >
+                    <path d="M6 9l6 6 6-6"/>
+                </svg>
+            </fieldset>
+
+            {/* Dropdown liste */}
             {open && (
                 <div style={{
                     position: "absolute", top: "calc(100% + 2px)", left: 0, right: 0,
-                    background: C.white, border: `1px solid ${C.border}`,
+                    background: "#fff", border: `1px solid #e5e7eb`,
                     borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
-                    zIndex: 100, overflow: "hidden",
+                    zIndex: 200, overflow: "hidden",
                 }}>
                     {options.map((opt) => (
                         <div
                             key={opt}
                             onClick={() => { onChange(opt); setOpen(false); }}
                             style={{
-                                padding: "14px 16px", cursor: "pointer",
-                                fontSize: 14, color: value === opt ? C.orange : C.textDark,
-                                background: value === opt ? C.orangeBg : "transparent",
-                                fontWeight: value === opt ? 700 : 400,
+                                padding: "15px 16px",
+                                cursor: "pointer",
+                                fontSize: 14,
+                                color: value === opt ? C.orange : "#111827",
+                                fontWeight: value === opt ? 600 : 400,
+                                background: value === opt ? "#FFF7ED" : "transparent",
                                 borderBottom: `1px solid #f3f4f6`,
                             }}
                             onMouseEnter={(e) => { if (value !== opt) e.currentTarget.style.background = "#f9fafb"; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = value === opt ? C.orangeBg : "transparent"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = value === opt ? "#FFF7ED" : "transparent"; }}
                         >
                             {opt}
                         </div>
@@ -87,10 +131,10 @@ function SelectOutlined({ label, value, onChange, options }) {
     );
 }
 
-// ─── Input Material outlined ───────────────────────────────────────────────
-function InputOutlined({ label, value, onChange, placeholder }) {
+// ─── Input plat — style identique au screenshot ───────────────────────────
+// Placeholder gris simple, bordure grise, hauteur 52px, pas de label flottant
+function InputFlat({ placeholder, value, onChange }) {
     const [focused, setFocused] = useState(false);
-    const filled = value.length > 0;
     return (
         <div style={{ position: "relative", width: "100%" }}>
             <input
@@ -98,27 +142,21 @@ function InputOutlined({ label, value, onChange, placeholder }) {
                 onChange={(e) => onChange(e.target.value)}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
-                placeholder=""
+                placeholder={placeholder}
                 style={{
-                    width: "100%", boxSizing: "border-box",
-                    border: `1.5px solid ${focused ? C.orange : "#9ca3af"}`,
-                    borderRadius: 4, padding: "18px 14px 6px",
-                    fontSize: 14, color: C.textDark,
-                    outline: "none", background: C.white,
-                    fontFamily: "'Segoe UI', Arial, sans-serif",
-                    minHeight: 54,
+                    width: "100%",
+                    boxSizing: "border-box",
+                    border: `1px solid ${focused ? C.orange : "#d1d5db"}`,
+                    borderRadius: 4,
+                    padding: "0 14px",
+                    height: 52,
+                    fontSize: 14,
+                    color: "#111827",
+                    outline: "none",
+                    background: "transparent",
+                    transition: "border-color 0.15s",
                 }}
             />
-            <span style={{
-                position: "absolute", left: 12,
-                top: focused || filled ? 5 : 18,
-                fontSize: focused || filled ? 11 : 14,
-                color: focused ? C.orange : filled ? C.orange : "#9ca3af",
-                transition: "all 0.15s", pointerEvents: "none",
-                background: C.white, padding: "0 2px",
-            }}>
-                {label}
-            </span>
         </div>
     );
 }
@@ -130,10 +168,7 @@ function VueResultat({ avis, declaration, contribuable, onRetour }) {
     const handleTelecharger = async () => {
         setDlLoading(true);
         try {
-            const bytes = await generateAvisPDF(
-                declaration || avis,
-                contribuable
-            );
+            const bytes = await generateAvisPDF(declaration || avis, contribuable);
             downloadPDF(bytes, `avis-${(declaration || avis).reference || "document"}.pdf`);
         } catch (e) {
             alert("Erreur PDF : " + e.message);
@@ -144,12 +179,10 @@ function VueResultat({ avis, declaration, contribuable, onRetour }) {
 
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24, padding: "32px 0" }}>
-            {/* Texte authentifié */}
             <p style={{ fontSize: 15, color: C.textDark, textAlign: "center", margin: 0 }}>
                 Votre document est authentifié et reconnu par le système fiscal Camerounais
             </p>
 
-            {/* Icône check vert */}
             <div style={{
                 width: 90, height: 90, borderRadius: "50%",
                 border: "5px solid #22c55e",
@@ -160,18 +193,16 @@ function VueResultat({ avis, declaration, contribuable, onRetour }) {
                 </svg>
             </div>
 
-            {/* Boutons */}
             <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
                 <button onClick={onRetour} style={{
                     background: "none", border: "none", cursor: "pointer",
-                    fontSize: 14, color: C.textMid, fontWeight: 600,
-                    padding: "10px 20px",
+                    fontSize: 14, color: C.textMid, fontWeight: 600, padding: "10px 20px",
                 }}>
                     Précédent
                 </button>
                 <button onClick={handleTelecharger} disabled={dlLoading} style={{
                     display: "flex", alignItems: "center", gap: 8,
-                    background: C.white, border: `1.5px solid #22c55e`,
+                    background: "#fff", border: `1.5px solid #22c55e`,
                     color: "#16a34a", borderRadius: 6, padding: "10px 22px",
                     fontSize: 14, fontWeight: 700, cursor: dlLoading ? "not-allowed" : "pointer",
                     opacity: dlLoading ? 0.7 : 1,
@@ -185,39 +216,29 @@ function VueResultat({ avis, declaration, contribuable, onRetour }) {
                 </button>
             </div>
 
-            {/* Aperçu infos document */}
             <div style={{
                 width: "100%", maxWidth: 680,
                 border: `1px solid ${C.border}`, borderRadius: 10,
-                background: C.white, overflow: "hidden",
+                background: "#fff", overflow: "hidden",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
             }}>
-                {/* Header aperçu */}
                 <div style={{ background: "#f3f4f6", padding: "12px 20px", borderBottom: `1px solid ${C.border}` }}>
                     <span style={{ fontWeight: 700, fontSize: 13, color: C.textDark }}>Aperçu du document</span>
                 </div>
-
-                {/* Infos */}
                 <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
                     {[
-                        ["Référence",      (declaration || avis)?.reference || "—"],
-                        ["Type",           "AVIS D'IMPOSITION"],
-                        ["Année fiscale",  (declaration || avis)?.annee || "—"],
-                        ["Contribuable",   contribuable?.nom_beneficiaire || contribuable?.nomBeneficiaire || "—"],
-                        ["NIU",            contribuable?.NIU || contribuable?.niu || "—"],
-                        ["Structure",      (declaration || avis)?.structureFiscale || "CDI YAOUNDE 2"],
-                        ["Montant",        `${((declaration || avis)?.montantBrut || 0).toLocaleString("fr-FR")} FCFA`],
-                        ["Statut",
-                            <span style={{
-                                background: "#f0fdf4", color: "#16a34a",
-                                border: "1px solid #86efac", borderRadius: 999,
-                                padding: "2px 12px", fontSize: 12, fontWeight: 700,
-                            }}>AUTHENTIFIÉ</span>
-                        ],
-                    ].map(([label, value]) => (
-                        <div key={label} style={{ display: "flex", gap: 16, alignItems: "center" }}>
-                            <span style={{ fontSize: 13, color: "#6b7280", minWidth: 120, fontWeight: 600 }}>{label} :</span>
-                            <span style={{ fontSize: 13, color: C.textDark }}>{value}</span>
+                        ["Référence",     (declaration || avis)?.reference || "—"],
+                        ["Type",          "AVIS D'IMPOSITION"],
+                        ["Année fiscale", (declaration || avis)?.annee || "—"],
+                        ["Contribuable",  contribuable?.nom_beneficiaire || contribuable?.nomBeneficiaire || "—"],
+                        ["NIU",           contribuable?.NIU || contribuable?.niu || "—"],
+                        ["Structure",     (declaration || avis)?.structureFiscale || "CDI YAOUNDE 2"],
+                        ["Montant",       `${((declaration || avis)?.montantBrut || 0).toLocaleString("fr-FR")} FCFA`],
+                        ["Statut", <span style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #86efac", borderRadius: 999, padding: "2px 12px", fontSize: 12, fontWeight: 700 }}>AUTHENTIFIÉ</span>],
+                    ].map(([lbl, val]) => (
+                        <div key={lbl} style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                            <span style={{ fontSize: 13, color: "#6b7280", minWidth: 120, fontWeight: 600 }}>{lbl} :</span>
+                            <span style={{ fontSize: 13, color: C.textDark }}>{val}</span>
                         </div>
                     ))}
                 </div>
@@ -226,14 +247,16 @@ function VueResultat({ avis, declaration, contribuable, onRetour }) {
     );
 }
 
-// ─── Page principale ───────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+// PAGE PRINCIPALE
+// ════════════════════════════════════════════════════════════════════════════
 export default function PageAuthentifier() {
-    const [mode,       setMode]       = useState(null);       // null | "reference" | "qr"
-    const [typeDoc,    setTypeDoc]    = useState("");
-    const [reference,  setReference]  = useState("");
-    const [loading,    setLoading]    = useState(false);
-    const [erreur,     setErreur]     = useState(null);
-    const [resultat,   setResultat]   = useState(null);       // { declaration, avis, contribuable }
+    const [mode,      setMode]      = useState(null);
+    const [typeDoc,   setTypeDoc]   = useState("");
+    const [reference, setReference] = useState("");
+    const [loading,   setLoading]   = useState(false);
+    const [erreur,    setErreur]    = useState(null);
+    const [resultat,  setResultat]  = useState(null);
 
     const handleValider = async () => {
         if (!typeDoc || !reference.trim()) {
@@ -243,22 +266,17 @@ export default function PageAuthentifier() {
         setLoading(true);
         setErreur(null);
         try {
-            // Récupérer les déclarations et chercher par référence
             const declarations = await getDeclarations(CURRENT_USER_ID);
             const declaration  = declarations.find(
                 (d) => d.reference?.toLowerCase() === reference.trim().toLowerCase()
                     && d.statut?.toUpperCase() === "SUBMITTED"
             );
-
             if (!declaration) {
                 setErreur("Aucun document trouvé pour cette référence. Vérifiez la référence et le type.");
                 setLoading(false);
                 return;
             }
-
-            // Récupérer les infos contribuable
             const contribuable = await getContribuable(CURRENT_USER_ID).catch(() => ({}));
-
             setResultat({ declaration, contribuable });
         } catch (e) {
             setErreur("Erreur lors de la vérification : " + e.message);
@@ -276,72 +294,46 @@ export default function PageAuthentifier() {
     };
 
     return (
-        <main style={{ flex: 1, background: C.bg, display: "flex", flexDirection: "column" }}>
+        <main style={{ flex: 1, background: "#f0f0f0", display: "flex", flexDirection: "column", minHeight: "100vh" }}>
 
             {/* ── Bannière DGI ── */}
-            <div style={{
-                width: "100%", height: 120,
-                background: "linear-gradient(135deg, #1a3a5c 0%, #2563a8 40%, #c0392b 70%, #8B0000 100%)",
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "0 40px", boxSizing: "border-box",
-                position: "relative", overflow: "hidden",
-            }}>
-                {/* Logo DGI gauche */}
-                <div style={{ display: "flex", alignItems: "center", gap: 16, zIndex: 1 }}>
-                    <div style={{
-                        width: 70, height: 70, borderRadius: "50%",
-                        background: "rgba(255,255,255,0.15)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        border: "2px solid rgba(255,255,255,0.4)",
-                    }}>
-                        <span style={{ color: "white", fontWeight: 900, fontSize: 22, fontFamily: "serif" }}>DGI</span>
-                    </div>
-                </div>
-
-                {/* Texte centre */}
-                <div style={{ textAlign: "center", zIndex: 1 }}>
-                    <div style={{ color: "white", fontWeight: 800, fontSize: 18, letterSpacing: 1 }}>
-                        DIRECTION GÉNÉRALE DES IMPOTS
-                    </div>
-                    <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, marginTop: 4, letterSpacing: 0.5 }}>
-                        DIRECTORATE GENERAL OF TAXATION
-                    </div>
-                </div>
-
-                {/* Armoiries droite */}
-                <div style={{
-                    width: 70, height: 70, borderRadius: "50%",
-                    background: "rgba(255,255,255,0.15)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    border: "2px solid rgba(255,255,255,0.4)",
-                    zIndex: 1,
-                }}>
-                    <svg viewBox="0 0 40 40" width="40" height="40">
-                        <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
-                        <text x="20" y="24" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">CMR</text>
-                    </svg>
-                </div>
+            <div style={{ display: "flex", justifyContent: "center", padding: "0 40px" }}>
+                <img
+                    src="/banniere-dgi.png"
+                    alt="Direction Générale des Impôts"
+                    style={{ width: "100%", maxWidth: 1100, display: "block", borderRadius: 0, marginTop: 20 }}
+                />
             </div>
 
-            {/* ── Contenu ── */}
-            <div style={{ padding: "40px 60px", display: "flex", flexDirection: "column", alignItems: "center", gap: 28 }}>
+            {/* ── Contenu principal ── */}
+            <div style={{
+                flex: 1,
+                display: "flex", flexDirection: "column", alignItems: "center",
+                padding: "40px 24px",
+                gap: 28,
+            }}>
 
                 {/* Titre */}
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: C.textDark, margin: 0 }}>
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: 0, textAlign: "center" }}>
                     Authentification des documents
                 </h2>
 
-                {/* Boutons mode */}
+                {/* Boutons mode — toujours visibles sauf résultat */}
                 {!resultat && (
                     <div style={{ display: "flex", gap: 12 }}>
                         <button
                             onClick={() => { setMode("reference"); setErreur(null); }}
                             style={{
-                                background: C.orange, color: C.white,
-                                border: "none", borderRadius: 6,
-                                padding: "12px 28px", fontSize: 14, fontWeight: 700,
+                                background: C.orange,
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: 6,
+                                padding: "13px 32px",
+                                fontSize: 14,
+                                fontWeight: 700,
                                 cursor: "pointer",
-                                boxShadow: mode === "reference" ? `0 0 0 3px ${C.orangeBg}` : "none",
+                                letterSpacing: 0.3,
+                                boxShadow: mode === "reference" ? `0 0 0 3px #FFF7ED` : "none",
                             }}
                         >
                             Saisir la référence
@@ -349,10 +341,15 @@ export default function PageAuthentifier() {
                         <button
                             onClick={() => { setMode("qr"); setErreur(null); }}
                             style={{
-                                background: "#16a34a", color: C.white,
-                                border: "none", borderRadius: 6,
-                                padding: "12px 28px", fontSize: 14, fontWeight: 700,
+                                background: "#16a34a",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: 6,
+                                padding: "13px 32px",
+                                fontSize: 14,
+                                fontWeight: 700,
                                 cursor: "pointer",
+                                letterSpacing: 0.3,
                                 boxShadow: mode === "qr" ? "0 0 0 3px #dcfce7" : "none",
                             }}
                         >
@@ -364,26 +361,28 @@ export default function PageAuthentifier() {
                 {/* ── Mode : Saisir référence ── */}
                 {mode === "reference" && !resultat && (
                     <div style={{
-                        width: "100%", maxWidth: 680,
-                        background: C.white, borderRadius: 10,
-                        border: `1px solid ${C.border}`,
-                        padding: "28px 32px",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                        display: "flex", flexDirection: "column", gap: 18,
+                        width: "100%",
+                        maxWidth: 480,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 16,
                     }}>
+                        {/* Champ Type de document */}
                         <SelectOutlined
                             label="Type de document"
                             value={typeDoc}
                             onChange={setTypeDoc}
                             options={TYPE_OPTIONS}
                         />
-                        {typeDoc && (
-                            <InputOutlined
-                                label="Référence du document"
-                                value={reference}
-                                onChange={setReference}
-                            />
-                        )}
+
+                        {/* Champ Référence — toujours visible */}
+                        <InputFlat
+                            placeholder="Référence du document"
+                            value={reference}
+                            onChange={setReference}
+                        />
+
+                        {/* Erreur */}
                         {erreur && (
                             <div style={{
                                 padding: "12px 16px", background: "#fef2f2",
@@ -393,24 +392,27 @@ export default function PageAuthentifier() {
                                 [!] {erreur}
                             </div>
                         )}
-                        {typeDoc && (
-                            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                                <button
-                                    onClick={handleValider}
-                                    disabled={loading}
-                                    style={{
-                                        background: loading ? "#d97706" : C.orange,
-                                        color: C.white, border: "none",
-                                        borderRadius: 6, padding: "11px 32px",
-                                        fontSize: 14, fontWeight: 700,
-                                        cursor: loading ? "not-allowed" : "pointer",
-                                        opacity: loading ? 0.8 : 1,
-                                    }}
-                                >
-                                    {loading ? "Vérification..." : "Valider"}
-                                </button>
-                            </div>
-                        )}
+
+                        {/* Bouton Valider — toujours visible, orange atténué si incomplet */}
+                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                            <button
+                                onClick={handleValider}
+                                disabled={loading}
+                                style={{
+                                    background: (!typeDoc || !reference.trim() || loading) ? "#F6C171" : C.orange,
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: 6,
+                                    padding: "11px 36px",
+                                    fontSize: 14,
+                                    fontWeight: 700,
+                                    cursor: loading ? "not-allowed" : "pointer",
+                                    transition: "background 0.15s",
+                                }}
+                            >
+                                {loading ? "Vérification..." : "Valider"}
+                            </button>
+                        </div>
                     </div>
                 )}
 
@@ -418,13 +420,12 @@ export default function PageAuthentifier() {
                 {mode === "qr" && !resultat && (
                     <div style={{
                         width: "100%", maxWidth: 480,
-                        background: C.white, borderRadius: 10,
+                        background: "#fff", borderRadius: 10,
                         border: `1px solid ${C.border}`,
                         padding: "40px 32px",
                         boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
                         display: "flex", flexDirection: "column", alignItems: "center", gap: 20,
                     }}>
-                        {/* Cadre caméra simulé */}
                         <div style={{
                             width: 240, height: 240,
                             border: `3px solid ${C.orange}`,
@@ -432,34 +433,20 @@ export default function PageAuthentifier() {
                             background: "#f9fafb",
                             display: "flex", alignItems: "center", justifyContent: "center",
                         }}>
-                            {/* Coins scanner */}
-                            {[["top:0,left:0","borderTop,borderLeft"],["top:0,right:0","borderTop,borderRight"],
-                              ["bottom:0,left:0","borderBottom,borderLeft"],["bottom:0,right:0","borderBottom,borderRight"]
-                            ].map((_, i) => {
-                                const positions = [
-                                    { top: -3, left: -3 }, { top: -3, right: -3 },
-                                    { bottom: -3, left: -3 }, { bottom: -3, right: -3 },
-                                ];
-                                const borders = [
-                                    { borderTop: `4px solid ${C.orange}`, borderLeft: `4px solid ${C.orange}` },
-                                    { borderTop: `4px solid ${C.orange}`, borderRight: `4px solid ${C.orange}` },
-                                    { borderBottom: `4px solid ${C.orange}`, borderLeft: `4px solid ${C.orange}` },
-                                    { borderBottom: `4px solid ${C.orange}`, borderRight: `4px solid ${C.orange}` },
-                                ];
-                                return (
-                                    <div key={i} style={{
-                                        position: "absolute", width: 24, height: 24,
-                                        ...positions[i], ...borders[i],
-                                    }}/>
-                                );
-                            })}
-                            {/* Icone QR */}
+                            {[
+                                { top: -3, left: -3,   borderTop: `4px solid ${C.orange}`, borderLeft:   `4px solid ${C.orange}` },
+                                { top: -3, right: -3,  borderTop: `4px solid ${C.orange}`, borderRight:  `4px solid ${C.orange}` },
+                                { bottom: -3, left: -3,  borderBottom: `4px solid ${C.orange}`, borderLeft:  `4px solid ${C.orange}` },
+                                { bottom: -3, right: -3, borderBottom: `4px solid ${C.orange}`, borderRight: `4px solid ${C.orange}` },
+                            ].map((s, i) => (
+                                <div key={i} style={{ position: "absolute", width: 24, height: 24, ...s }}/>
+                            ))}
                             <svg viewBox="0 0 80 80" width="80" height="80" fill="none">
-                                <rect x="5" y="5" width="28" height="28" rx="3" stroke={C.orange} strokeWidth="3" fill="none"/>
+                                <rect x="5"  y="5"  width="28" height="28" rx="3" stroke={C.orange} strokeWidth="3" fill="none"/>
                                 <rect x="14" y="14" width="10" height="10" fill={C.orange}/>
-                                <rect x="47" y="5" width="28" height="28" rx="3" stroke={C.orange} strokeWidth="3" fill="none"/>
+                                <rect x="47" y="5"  width="28" height="28" rx="3" stroke={C.orange} strokeWidth="3" fill="none"/>
                                 <rect x="56" y="14" width="10" height="10" fill={C.orange}/>
-                                <rect x="5" y="47" width="28" height="28" rx="3" stroke={C.orange} strokeWidth="3" fill="none"/>
+                                <rect x="5"  y="47" width="28" height="28" rx="3" stroke={C.orange} strokeWidth="3" fill="none"/>
                                 <rect x="14" y="56" width="10" height="10" fill={C.orange}/>
                                 <line x1="47" y1="47" x2="75" y2="47" stroke={C.orange} strokeWidth="3"/>
                                 <line x1="47" y1="60" x2="60" y2="60" stroke={C.orange} strokeWidth="3"/>

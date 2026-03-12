@@ -226,7 +226,7 @@ export default function TabRecapitulatif({
         <div>
             {/* Titre */}
             <div style={{ background: C.orangeBg, borderRadius: 8, padding: "14px 22px", marginBottom: 20 }}>
-                <span style={{ color: C.orange, fontWeight: 700, fontSize: 20, fontFamily: "monospace" }}>
+                <span style={{ color: C.orange, fontWeight: 700, fontSize: 20 }}>
                     I – Récapitulatif
                 </span>
             </div>

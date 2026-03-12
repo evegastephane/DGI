@@ -376,7 +376,7 @@ export default function TabEtablissements({
 
             {/* Titre section */}
             <div style={{ background: C.orangeBg, borderRadius: 8, padding: "12px 20px", marginBottom: 20 }}>
-                <span style={{ color: C.orange, fontWeight: 700, fontSize: 17, fontFamily: "monospace" }}>
+                <span style={{ color: C.orange, fontWeight: 700, fontSize: 17 }}>
                     I — Liste des établissements
                 </span>
             </div>

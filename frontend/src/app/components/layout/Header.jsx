@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import C from "../../lib/utils/colors";
 import { MenuIcon, BellIcon, UserIcon, GlobeIcon, DropIcon } from "../../components/ui/Icons";
-import { getNotifications, marquerNotificationLue, marquerToutesLues, CURRENT_USER_ID } from "../../lib/api/contribuableApi";
+import { getNotifications, marquerNotificationLue, marquerToutesLues, getContribuable, CURRENT_USER_ID } from "../../lib/api/contribuableApi";
 
 // ─── Formatage date courte ─────────────────────────────────────────────────
 function formatDateCourte(dateStr) {
@@ -184,25 +184,118 @@ function NotifDropdown({ notifications, loading, onMarquerLu, onMarquerTous, onV
     );
 }
 
+// ─── Dropdown utilisateur ──────────────────────────────────────────────────
+function UserDropdown({ onParametrages, onDeconnexion, niu, email }) {
+    return (
+        <div style={{
+            position: "absolute", top: "calc(100% + 12px)", right: 0,
+            width: 280,
+            background: "#fff",
+            borderRadius: 14,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+            border: "1px solid #e5e7eb",
+            zIndex: 999,
+            overflow: "hidden",
+        }}>
+            {/* Profil */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 18px 14px" }}>
+                <div style={{
+                    width: 38, height: 38, borderRadius: "50%",
+                    background: "#f3f4f6", border: "1px solid #e5e7eb",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#555", flexShrink: 0,
+                }}>
+                    <UserIcon />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.orange, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        P050517806522K
+                    </div>
+                    <div style={{ fontSize: 12, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        P050517806522K@impots.cm
+                    </div>
+                </div>
+            </div>
+
+            <div style={{ height: 1, background: "#f3f4f6" }} />
+
+            {/* Paramètrages */}
+            <button
+                onClick={onParametrages}
+                style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    width: "100%", padding: "13px 18px",
+                    background: "none", border: "none", cursor: "pointer",
+                    fontSize: 14, color: "#111827", fontWeight: 500,
+                    textAlign: "left", transition: "background .12s", boxSizing: "border-box",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                onMouseLeave={e => e.currentTarget.style.background = "none"}
+            >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+                Paramètrages
+            </button>
+
+            <div style={{ height: 1, background: "#f3f4f6" }} />
+
+            {/* Déconnexion */}
+            <button
+                onClick={onDeconnexion}
+                style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    width: "100%", padding: "13px 18px",
+                    background: "none", border: "none", cursor: "pointer",
+                    fontSize: 14, color: "#111827", fontWeight: 500,
+                    textAlign: "left", transition: "background .12s", boxSizing: "border-box",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                onMouseLeave={e => e.currentTarget.style.background = "none"}
+            >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                Déconnexion
+            </button>
+        </div>
+    );
+}
+
 // ─── Header principal ──────────────────────────────────────────────────────
 export default function Header({ sidebarOpen, setSidebarOpen, notifCount = 0, onNotifCountChange, setPage, refreshKey = 0 }) {
-    const [open, setOpen]             = useState(false);
+    const [open,          setOpen]          = useState(false);
+    const [userOpen,      setUserOpen]      = useState(false);
     const [notifications, setNotifications] = useState([]);
-    const [loading, setLoading]       = useState(false);
-    const wrapperRef                  = useRef(null);
+    const [loading,       setLoading]       = useState(false);
+    const [contribuable,  setContribuable]  = useState(null);
+    const wrapperRef     = useRef(null);
+    const userWrapperRef = useRef(null);
 
-    // Fermer le dropdown en cliquant dehors
+    // Charger le contribuable actif une seule fois au montage
+    useEffect(() => {
+        getContribuable(CURRENT_USER_ID)
+            .then(data => setContribuable(data))
+            .catch(() => {});
+    }, []);
+
+    const niu   = contribuable?.NIU   ?? contribuable?.niu   ?? "—";
+    const email = contribuable?.email ?? "—";
+
+    // Fermer les dropdowns en cliquant dehors
     useEffect(() => {
         const handler = (e) => {
-            if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-                setOpen(false);
-            }
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false);
+            if (userWrapperRef.current && !userWrapperRef.current.contains(e.target)) setUserOpen(false);
         };
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, []);
 
-    // Charger les notifications quand on ouvre OU quand refreshKey change
+    // Charger les notifications quand refreshKey change
     useEffect(() => {
         const load = async () => {
             setLoading(true);
@@ -210,7 +303,6 @@ export default function Header({ sidebarOpen, setSidebarOpen, notifCount = 0, on
                 const data = await getNotifications(CURRENT_USER_ID);
                 data.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
                 setNotifications(data);
-                // Mettre à jour le badge dans le parent
                 if (onNotifCountChange) onNotifCountChange(data.filter(n => !n.lu).length);
             } catch {
                 // silencieux
@@ -221,8 +313,8 @@ export default function Header({ sidebarOpen, setSidebarOpen, notifCount = 0, on
         load();
     }, [refreshKey]);
 
-    // Charger aussi à l'ouverture du dropdown
     const handleToggle = async () => {
+        setUserOpen(false);
         setOpen(prev => !prev);
         if (!open) {
             setLoading(true);
@@ -292,7 +384,7 @@ export default function Header({ sidebarOpen, setSidebarOpen, notifCount = 0, on
 
             <div style={{ flex: 1 }} />
 
-            {/* Cloche + dropdown */}
+            {/* Cloche + dropdown notifications */}
             <div ref={wrapperRef} style={{ position: "relative", marginRight: 8 }}>
                 <button
                     onClick={handleToggle}
@@ -329,10 +421,30 @@ export default function Header({ sidebarOpen, setSidebarOpen, notifCount = 0, on
                 )}
             </div>
 
-            {/* Avatar */}
-            <button style={{ background: "none", border: "none", cursor: "pointer", color: "#555", lineHeight: 0, marginRight: 8 }}>
-                <UserIcon />
-            </button>
+            {/* Bonhomme + dropdown utilisateur */}
+            <div ref={userWrapperRef} style={{ position: "relative", marginRight: 8 }}>
+                <button
+                    onClick={() => { setOpen(false); setUserOpen(prev => !prev); }}
+                    style={{
+                        background: userOpen ? "#f3f4f6" : "none",
+                        border: "none", cursor: "pointer",
+                        color: "#555", lineHeight: 0,
+                        borderRadius: "50%", width: 40, height: 40,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        transition: "background .15s",
+                    }}
+                >
+                    <UserIcon />
+                </button>
+                {userOpen && (
+                    <UserDropdown
+                        niu={niu}
+                        email={email}
+                        onParametrages={() => { setUserOpen(false); if (setPage) setPage("Profile"); }}
+                        onDeconnexion={() => { setUserOpen(false); /* logique déconnexion */ }}
+                    />
+                )}
+            </div>
 
             {/* Langue */}
             <div style={{

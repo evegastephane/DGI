@@ -8,170 +8,385 @@ import { generateAvisPDF, downloadPDF } from "../../lib/utils/generateAvisPDF";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
-// ─── Styles communs (identiques à liste des avis) ─────────────────────────────
+// ─── Styles communs ─────────────────────────────────────────────────────────────
 const thS = {
-    padding: "13px 16px", textAlign: "left", fontSize: 12,
-    fontWeight: 700, color: "#6B7280", borderBottom: `2px solid ${C.border}`,
-    whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.05em",
-    background: "#F9FAFB",
+    padding: "0", textAlign: "left", fontSize: 13,
+    fontWeight: 500, color: "#6B7280", borderBottom: `1px solid #E5E7EB`,
+    whiteSpace: "nowrap", background: "#fff", position: "relative",
 };
-const tdS = { padding: "14px 16px", fontSize: 13, color: "#374151", verticalAlign: "middle" };
+const tdS = { padding: "18px 20px", fontSize: 14, color: "#111827", verticalAlign: "middle" };
 
 const ROWS_OPTIONS = [10, 25, 50];
 const STATUT_OPTIONS = [
     { value: "SUBMITTED", label: "SUBMITTED" },
     { value: "DRAFT",     label: "DRAFT"     },
-    { value: "PAYE",      label: "PAYÉ"      },
-    { value: "APURE",     label: "APURÉ"     },
+    { value: "VALIDE",    label: "VALIDÉ"    },
+    { value: "REJETE",    label: "REJETÉ"    },
 ];
 
-// ─── Badge statut ─────────────────────────────────────────────────────────────
+// ─── ColHeader avec menu tri/filtre ──────────────────────────────────────────
+function ColHeader({ label, colKey, sortConfig, onSort, hiddenCols, onHide, align }) {
+    const [open, setOpen] = useState(false);
+    const [hover, setHover] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", h);
+        return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    if (hiddenCols?.includes(colKey)) return null;
+
+    const isActive = sortConfig?.key === colKey;
+    const isAsc    = isActive && sortConfig.dir === "asc";
+    const isDesc   = isActive && sortConfig.dir === "desc";
+
+    const menuItems = [
+        {
+            icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            ),
+            label: "Sort by ASC",
+            onClick: () => { onSort(colKey, "asc"); setOpen(false); },
+        },
+        {
+            icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+            ),
+            label: "Sort by DESC",
+            onClick: () => { onSort(colKey, "desc"); setOpen(false); },
+        },
+        { divider: true },
+        {
+            icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            ),
+            label: "Filter",
+            onClick: () => setOpen(false),
+        },
+        { divider: true },
+        {
+            icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            ),
+            label: "Hide column",
+            onClick: () => { onHide(colKey); setOpen(false); },
+        },
+        {
+            icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            ),
+            label: "Manage columns",
+            onClick: () => setOpen(false),
+        },
+    ];
+
+    return (
+        <th style={{ ...thS, textAlign: align || "left" }}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}>
+            <div style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "13px 12px 13px 20px",
+                justifyContent: align === "right" ? "flex-end" : "flex-start",
+            }}>
+                <span>{label}</span>
+                {/* Sort indicator */}
+                {isActive && (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2.5">
+                        {isAsc
+                            ? <path d="M12 19V5M5 12l7-7 7 7"/>
+                            : <path d="M12 5v14M5 12l7 7 7-7"/>}
+                    </svg>
+                )}
+                {/* ⋮ button */}
+                <div ref={ref} style={{ position: "relative", marginLeft: "auto" }}>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+                        style={{
+                            background: "none", border: "none", cursor: "pointer",
+                            padding: "2px 4px", borderRadius: 3,
+                            color: open || hover ? "#6B7280" : "transparent",
+                            transition: "color 0.15s",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 16, lineHeight: 1, letterSpacing: 1,
+                        }}>
+                        ⋮
+                    </button>
+                    {open && (
+                        <div style={{
+                            position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 400,
+                            background: "#fff", border: `1px solid #E5E7EB`,
+                            borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.13)",
+                            minWidth: 200, overflow: "hidden",
+                        }}>
+                            {menuItems.map((item, i) =>
+                                item.divider ? (
+                                    <div key={i} style={{ height: 1, background: "#F3F4F6", margin: "2px 0" }} />
+                                ) : (
+                                    <button key={item.label} onClick={item.onClick}
+                                            style={{
+                                                display: "flex", alignItems: "center", gap: 12,
+                                                width: "100%", padding: "11px 16px",
+                                                border: "none", background: "transparent",
+                                                cursor: "pointer", fontSize: 13,
+                                                color: "#374151", textAlign: "left",
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = "#F9FAFB"}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                                        <span style={{ color: "#9CA3AF", display: "flex" }}>{item.icon}</span>
+                                        {item.label}
+                                    </button>
+                                )
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </th>
+    );
+}
+
+// ─── Badge statut ────────────────────────────────────────────────────────────
 function StatutBadge({ statut }) {
-    const MAP = {
-        SUBMITTED: { bg: "#FFF7ED", color: "#C2410C", border: "1px solid #FDBA74" },
-        DRAFT:     { bg: "#F3F4F6", color: "#6B7280", border: "1px solid #D1D5DB" },
-        PAYE:      { bg: "#F0FDF4", color: "#15803D", border: "1px solid #86EFAC" },
-        APURE:     { bg: "#EFF6FF", color: "#1D4ED8", border: "1px solid #93C5FD" },
-        VALIDEE:   { bg: "#FFF7ED", color: "#C2410C", border: "1px solid #FDBA74" },
-    };
-    const s = MAP[statut?.toUpperCase()] || MAP.DRAFT;
-    const label = statut?.toUpperCase() === "VALIDEE" ? "SUBMITTED" : (statut?.toUpperCase() || "DRAFT");
+    const s = statut?.toUpperCase();
+    if (s === "SUBMITTED" || s === "VALIDEE") {
+        return (
+            <span style={{
+                background: "#F59E0B", color: "#fff",
+                padding: "5px 16px", borderRadius: 999,
+                fontSize: 12, fontWeight: 700, display: "inline-block",
+                textTransform: "uppercase", letterSpacing: "0.05em",
+            }}>SUBMITTED</span>
+        );
+    }
+    if (s === "PAYE") {
+        return (
+            <span style={{
+                background: "#F0FDF4", color: "#15803D", border: "1px solid #86EFAC",
+                padding: "5px 16px", borderRadius: 999,
+                fontSize: 12, fontWeight: 700, display: "inline-block",
+                textTransform: "uppercase", letterSpacing: "0.05em",
+            }}>PAYÉ</span>
+        );
+    }
+    if (s === "APURE") {
+        return (
+            <span style={{
+                background: "#EFF6FF", color: "#1D4ED8", border: "1px solid #93C5FD",
+                padding: "5px 16px", borderRadius: 999,
+                fontSize: 12, fontWeight: 700, display: "inline-block",
+                textTransform: "uppercase", letterSpacing: "0.05em",
+            }}>APURÉ</span>
+        );
+    }
+    // DRAFT default
     return (
         <span style={{
-            ...s, padding: "3px 12px", borderRadius: 999,
-            fontSize: 11, fontWeight: 700, display: "inline-block",
-            textTransform: "uppercase", letterSpacing: "0.06em",
-        }}>{label}</span>
+            background: "#F3F4F6", color: "#6B7280", border: "1px solid #D1D5DB",
+            padding: "5px 16px", borderRadius: 999,
+            fontSize: 12, fontWeight: 700, display: "inline-block",
+            textTransform: "uppercase", letterSpacing: "0.05em",
+        }}>DRAFT</span>
     );
 }
 
-// ─── Outlined input (même style que liste des avis) ────────────────────────────
-function OutlinedInput({ label, value, onClear, onClick, open, children }) {
-    const isFilled = value && value.length > 0;
+// ─── Select Exercice — label flottant + options "EXERCICE YYYY" ───────────────
+function ExerciceSelect({ label, value, onChange, options }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", h);
+        return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    const isFilled = !!value;
+
     return (
-        <div style={{ position: "relative", flex: 1, minWidth: 180 }}>
-            <div onClick={onClick} style={{
-                border: `1.5px solid ${open || isFilled ? C.orange : "#9CA3AF"}`,
-                borderRadius: 4, padding: "14px 40px 6px 12px",
-                background: C.white, cursor: "pointer", minHeight: 52,
-                display: "flex", alignItems: "center",
+        <div ref={ref} style={{ position: "relative", flex: 1 }}>
+            {/* Trigger */}
+            <div onClick={() => setOpen(!open)} style={{
+                position: "relative", border: `1.5px solid ${open || isFilled ? "#F59E0B" : "#D1D5DB"}`,
+                borderRadius: 4, height: 37, background: "#fff",
+                cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center", padding: "0 14px",
             }}>
+                {/* Floating label */}
                 <span style={{
-                    position: "absolute", left: 10,
-                    top: isFilled || open ? 4 : 16,
-                    fontSize: isFilled || open ? 10 : 14,
-                    color: open || isFilled ? C.orange : "#9CA3AF",
-                    transition: "all 0.15s", pointerEvents: "none",
-                    background: C.white, padding: "0 2px",
+                    position: "absolute", left: 12, top: open || isFilled ? -10 : "50%",
+                    transform: open || isFilled ? "none" : "translateY(-50%)",
+                    fontSize: open || isFilled ? 11 : 14,
+                    color: open || isFilled ? "#F59E0B" : "#9CA3AF",
+                    background: "#fff", padding: "0 4px",
+                    transition: "all 0.15s", pointerEvents: "none", lineHeight: 1,
                 }}>{label}</span>
-                <span style={{
-                    fontSize: 14, color: isFilled ? C.textDark : "transparent",
-                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                    maxWidth: "calc(100% - 10px)",
-                }}>{value || "\u200b"}</span>
-            </div>
-            {isFilled && (
-                <button onClick={(e) => { e.stopPropagation(); onClear(); }} style={{
-                    position: "absolute", right: 28, top: "50%", transform: "translateY(-50%)",
-                    background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", fontSize: 16,
-                }}>×</button>
-            )}
-            <span style={{
-                position: "absolute", right: 8, top: "50%",
-                transform: `translateY(-50%) ${open ? "rotate(180deg)" : ""}`,
-                pointerEvents: "none", color: "#9CA3AF", fontSize: 12, transition: "transform 0.15s",
-            }}>▼</span>
-            {children}
-        </div>
-    );
-}
-
-// ─── Dropdown option list ─────────────────────────────────────────────────────
-function DropdownList({ options, value, onChange, onClose }) {
-    return (
-        <div style={{
-            position: "absolute", top: "calc(100% + 2px)", left: 0, right: 0,
-            background: C.white, border: `1px solid ${C.border}`,
-            borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
-            zIndex: 100, overflow: "hidden",
-        }}>
-            {options.map((opt) => (
-                <div key={opt.value} onClick={() => { onChange(opt.value); onClose(); }}
-                     style={{
-                         padding: "12px 16px", cursor: "pointer", fontSize: 13,
-                         color: value === opt.value ? C.orange : C.textDark,
-                         background: value === opt.value ? C.orangeBg : "transparent",
-                         fontWeight: value === opt.value ? 700 : 400,
-                         borderBottom: `1px solid #F3F4F6`,
-                     }}
-                     onMouseEnter={(e) => { if (value !== opt.value) e.currentTarget.style.background = "#F9FAFB"; }}
-                     onMouseLeave={(e) => { e.currentTarget.style.background = value === opt.value ? C.orangeBg : "transparent"; }}>
-                    {opt.label}
-                </div>
-            ))}
-        </div>
-    );
-}
-
-// ─── Boutons d'action DRAFT ────────────────────────────────────────────────────
-function DraftActions({ declaration, onModifier, onSoumis }) {
-    const [submitting, setSubmitting] = useState(false);
-
-    const handleSoumettre = async () => {
-        if (!window.confirm(`Soumettre la déclaration ${declaration.reference} ? Elle ne pourra plus être modifiée.`)) return;
-        setSubmitting(true);
-        try {
-            await soumettreDraft(declaration.id);
-            onSoumis();
-        } catch (e) {
-            alert("Erreur lors de la soumission : " + e.message);
-        } finally { setSubmitting(false); }
-    };
-
-    return (
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={() => onModifier(declaration)}
-                    style={{
-                        display: "flex", alignItems: "center", gap: 5,
-                        background: C.white, color: C.orange, border: `1.5px solid ${C.orange}`,
-                        borderRadius: 5, padding: "6px 14px", fontWeight: 600, fontSize: 12,
-                        cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s",
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = C.orangeBg}
-                    onMouseLeave={(e) => e.currentTarget.style.background = C.white}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-                Modifier
-            </button>
-            <button onClick={handleSoumettre} disabled={submitting}
-                    style={{
-                        display: "flex", alignItems: "center", gap: 5,
-                        background: submitting ? "#F5C77E" : C.orange, color: "#fff",
-                        border: "none", borderRadius: 5, padding: "6px 14px",
-                        fontWeight: 600, fontSize: 12,
-                        cursor: submitting ? "not-allowed" : "pointer", whiteSpace: "nowrap", transition: "all 0.15s",
-                    }}
-                    onMouseEnter={(e) => { if (!submitting) e.currentTarget.style.background = "#D97706"; }}
-                    onMouseLeave={(e) => { if (!submitting) e.currentTarget.style.background = C.orange; }}>
-                {submitting ? "..." : (
-                    <>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                        </svg>
-                        Soumettre
-                    </>
+                <span style={{ fontSize: 14, color: isFilled ? "#111827" : "transparent", marginTop: 4 }}>
+                    {isFilled ? `EXERCICE ${value}` : "\u200b"}
+                </span>
+                {isFilled && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onChange(""); }}
+                        style={{
+                            position: "absolute", right: 36, top: "50%", transform: "translateY(-50%)",
+                            background: "none", border: "none", cursor: "pointer",
+                            color: "#9CA3AF", fontSize: 16, lineHeight: 1, padding: "2px",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                        ×
+                    </button>
                 )}
-            </button>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2"
+                     style={{ position: "absolute", right: 12, top: "50%", transform: `translateY(-50%) ${open ? "rotate(180deg)" : ""}`, transition: "transform 0.2s", pointerEvents: "none" }}>
+                    <path d="M6 9l6 6 6-6"/>
+                </svg>
+            </div>
+
+            {/* Dropdown */}
+            {open && (
+                <div style={{
+                    position: "absolute", top: "calc(100% + 2px)", left: 0, right: 0, zIndex: 200,
+                    background: "#fff", border: `1px solid #E5E7EB`,
+                    borderRadius: 6, boxShadow: "0 4px 20px rgba(0,0,0,0.10)", overflow: "hidden",
+                }}>
+                    {options.map((opt) => (
+                        <div key={opt.value}
+                             onClick={() => { onChange(opt.value); setOpen(false); }}
+                             style={{
+                                 padding: "13px 16px", fontSize: 14, cursor: "pointer",
+                                 color: "#374151", fontWeight: 400,
+                                 borderBottom: `1px solid #F3F4F6`,
+                                 background: "transparent",
+                             }}
+                             onMouseEnter={(e) => e.currentTarget.style.background = "#F9FAFB"}
+                             onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                            EXERCICE {opt.label}
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
 
-// ─── Menu ··· pour non-DRAFT ──────────────────────────────────────────────────
-function ActionMenu({ declaration, contribuable }) {
-    const [open, setOpen]             = useState(false);
+// ─── Select Statut — label flottant + checkboxes ──────────────────────────────
+function StatutSelect({ label, value, onChange, options }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", h);
+        return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    const isFilled = !!value;
+    const selected = options.find(o => o.value === value);
+
+    return (
+        <div ref={ref} style={{ position: "relative", flex: 1 }}>
+            {/* Trigger */}
+            <div onClick={() => setOpen(!open)} style={{
+                position: "relative", border: `1.5px solid ${open || isFilled ? "#F59E0B" : "#D1D5DB"}`,
+                borderRadius: 4, height: 37, background: "#fff",
+                cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center", padding: "0 14px",
+            }}>
+                {/* Floating label */}
+                <span style={{
+                    position: "absolute", left: 12, top: open || isFilled ? -10 : "50%",
+                    transform: open || isFilled ? "none" : "translateY(-50%)",
+                    fontSize: open || isFilled ? 11 : 14,
+                    color: open || isFilled ? "#F59E0B" : "#9CA3AF",
+                    background: "#fff", padding: "0 4px",
+                    transition: "all 0.15s", pointerEvents: "none", lineHeight: 1,
+                }}>{label}</span>
+                <span style={{ fontSize: 14, color: isFilled ? "#111827" : "transparent", marginTop: 4 }}>
+                    {selected?.label || "\u200b"}
+                </span>
+                {isFilled && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onChange(""); }}
+                        style={{
+                            position: "absolute", right: 36, top: "50%", transform: "translateY(-50%)",
+                            background: "none", border: "none", cursor: "pointer",
+                            color: "#9CA3AF", fontSize: 16, lineHeight: 1, padding: "2px",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                        ×
+                    </button>
+                )}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2"
+                     style={{ position: "absolute", right: 12, top: "50%", transform: `translateY(-50%) ${open ? "rotate(180deg)" : ""}`, transition: "transform 0.2s", pointerEvents: "none" }}>
+                    <path d="M6 9l6 6 6-6"/>
+                </svg>
+            </div>
+
+            {/* Dropdown avec checkboxes */}
+            {open && (
+                <div style={{
+                    position: "absolute", top: "calc(100% + 2px)", left: 0, right: 0, zIndex: 200,
+                    background: "#fff", border: `1px solid #E5E7EB`,
+                    borderRadius: 6, boxShadow: "0 4px 20px rgba(0,0,0,0.10)", overflow: "hidden",
+                }}>
+                    {/* Option "Tout" */}
+                    <div onClick={() => { onChange(""); setOpen(false); }}
+                         style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 16px", cursor: "pointer", borderBottom: `1px solid #F3F4F6`, background: "transparent" }}
+                         onMouseEnter={(e) => e.currentTarget.style.background = "#F9FAFB"}
+                         onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                        {/* Checkbox checked style for "Tout" when nothing selected */}
+                        <span style={{
+                            width: 18, height: 18, borderRadius: 3, flexShrink: 0,
+                            border: `2px solid ${!value ? "#F59E0B" : "#D1D5DB"}`,
+                            background: !value ? "#FFF7ED" : "#fff",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                            {!value && (
+                                <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                                    <path d="M2 6l3 3 5-5" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            )}
+                        </span>
+                        <span style={{ fontSize: 14, color: "#9CA3AF", fontWeight: !value ? 500 : 400 }}>Tout</span>
+                    </div>
+
+                    {options.map((opt) => {
+                        const checked = value === opt.value;
+                        return (
+                            <div key={opt.value}
+                                 onClick={() => { onChange(opt.value); setOpen(false); }}
+                                 style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 16px", cursor: "pointer", borderBottom: `1px solid #F3F4F6`, background: "transparent" }}
+                                 onMouseEnter={(e) => e.currentTarget.style.background = "#F9FAFB"}
+                                 onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                                <span style={{
+                                    width: 18, height: 18, borderRadius: 3, flexShrink: 0,
+                                    border: `2px solid ${checked ? "#F59E0B" : "#D1D5DB"}`,
+                                    background: checked ? "#FFF7ED" : "#fff",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                }}>
+                                    {checked && (
+                                        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                                            <path d="M2 6l3 3 5-5" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                    )}
+                                </span>
+                                <span style={{ fontSize: 14, color: "#374151", fontWeight: checked ? 500 : 400, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                                    {opt.label}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Menu ··· actions ─────────────────────────────────────────────────────────
+function ActionMenu({ declaration, contribuable, isDraft, onModifier, onSoumis }) {
+    const [open, setOpen]               = useState(false);
     const [downloading, setDownloading] = useState(false);
+    const [submitting, setSubmitting]   = useState(false);
     const ref = useRef(null);
 
     useEffect(() => {
@@ -189,31 +404,52 @@ function ActionMenu({ declaration, contribuable }) {
         finally { setDownloading(false); }
     };
 
+    const handleSoumettre = async () => {
+        setOpen(false);
+        if (!window.confirm(`Soumettre la déclaration ${declaration.reference} ? Elle ne pourra plus être modifiée.`)) return;
+        setSubmitting(true);
+        try {
+            await soumettreDraft(declaration.id);
+            onSoumis && onSoumis();
+        } catch (e) { alert("Erreur lors de la soumission : " + e.message); }
+        finally { setSubmitting(false); }
+    };
+
+    const menuItems = isDraft ? [
+        { label: "Modifier",   onClick: () => { setOpen(false); onModifier && onModifier(declaration); } },
+        { label: submitting ? "Soumission..." : "Soumettre", onClick: handleSoumettre, disabled: submitting },
+    ] : [
+        { label: downloading ? "Génération..." : "Télécharger l'avis", onClick: handleTelecharger, disabled: downloading },
+    ];
+
     return (
         <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
             <button onClick={() => setOpen(!open)}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", fontSize: 20, letterSpacing: 3, padding: "4px 6px", borderRadius: 4 }}>
-                {downloading ? "..." : "•••"}
+                    style={{
+                        background: "none", border: "none", cursor: "pointer",
+                        color: "#9CA3AF", fontSize: 22, letterSpacing: 2,
+                        padding: "4px 8px", borderRadius: 4, lineHeight: 1,
+                        display: "flex", alignItems: "center",
+                    }}>
+                •••
             </button>
             {open && (
                 <div style={{
-                    position: "absolute", right: 0, top: "100%", zIndex: 200,
-                    background: C.white, border: `1px solid ${C.border}`,
-                    borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", minWidth: 200, overflow: "hidden",
+                    position: "absolute", right: 0, top: "100%", zIndex: 300,
+                    background: "#fff", border: `1px solid #E5E7EB`,
+                    borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                    minWidth: 200, overflow: "hidden",
                 }}>
-                    {[
-                        { label: downloading ? "Generation..." : "Télécharger l'avis", onClick: handleTelecharger, disabled: downloading },
-                        { label: "Payer", onClick: () => setOpen(false), disabled: false },
-                    ].map((item) => (
+                    {menuItems.map((item) => (
                         <button key={item.label} onClick={item.onClick} disabled={item.disabled}
                                 style={{
-                                    display: "flex", alignItems: "center", gap: 12, width: "100%",
+                                    display: "flex", alignItems: "center", width: "100%",
                                     padding: "13px 16px", border: "none", background: "transparent",
                                     cursor: item.disabled ? "not-allowed" : "pointer", fontSize: 13,
-                                    color: item.disabled ? "#9CA3AF" : C.textDark, textAlign: "left",
+                                    color: item.disabled ? "#9CA3AF" : "#374151", textAlign: "left",
                                     borderBottom: `1px solid #F3F4F6`,
                                 }}
-                                onMouseEnter={(e) => { if (!item.disabled) e.currentTarget.style.background = C.orangeBg; }}
+                                onMouseEnter={(e) => { if (!item.disabled) e.currentTarget.style.background = "#FFF7ED"; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
                             {item.label}
                         </button>
@@ -235,9 +471,14 @@ export default function MesDeclarations({ setPage, onModifierDraft }) {
     const [filtreAnnee,  setFiltreAnnee]  = useState("");
     const [filtreStatut, setFiltreStatut] = useState("");
 
-    const [openAnnee,   setOpenAnnee]    = useState(false);
-    const [openStatut,  setOpenStatut]   = useState(false);
+    // Valeurs "en attente" — appliquées uniquement au clic sur Rechercher
+    const [pendingAnnee,  setPendingAnnee]  = useState("");
+    const [pendingStatut, setPendingStatut] = useState("");
+
     const [rechercheOpen, setRechercheOpen] = useState(false);
+
+    const [sortConfig,   setSortConfig]   = useState(null); // { key, dir }
+    const [hiddenCols,   setHiddenCols]   = useState([]);
 
     const [rowsPerPage,  setRowsPerPage]  = useState(10);
     const [currentPage,  setCurrentPage]  = useState(1);
@@ -262,179 +503,168 @@ export default function MesDeclarations({ setPage, onModifierDraft }) {
         return true;
     });
 
-    const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
-    const paginated  = filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+    const sorted = sortConfig ? [...filtered].sort((a, b) => {
+        const val = (item) => {
+            if (sortConfig.key === "reference")       return item.reference || "";
+            if (sortConfig.key === "annee")           return item.annee || 0;
+            if (sortConfig.key === "structureFiscale") return item.structureFiscale || "";
+            if (sortConfig.key === "statut")          return item.statut || "";
+            if (sortConfig.key === "montantBrut")     return item.montantBrut || 0;
+            if (sortConfig.key === "date")            return item.date || "";
+            return "";
+        };
+        const va = val(a), vb = val(b);
+        if (va < vb) return sortConfig.dir === "asc" ? -1 : 1;
+        if (va > vb) return sortConfig.dir === "asc" ? 1 : -1;
+        return 0;
+    }) : filtered;
+
+    const handleSort = (key, dir) => setSortConfig({ key, dir });
+    const handleHide = (key) => setHiddenCols(prev => [...prev, key]);
+
+    const totalPages = Math.max(1, Math.ceil(sorted.length / rowsPerPage));
+    const paginated  = sorted.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
     const fmtDate = (d) => d
-        ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })
-        : "—";
+        ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }) + " " +
+        new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+        : "--";
 
     const ANNEE_OPTIONS = [...new Set(avis.map(a => String(a.annee)).filter(Boolean))].sort().reverse().map(v => ({ value: v, label: v }));
 
     return (
-        <main style={{ padding: "24px 28px 60px", flex: 1, background: C.bg }}>
+        <main style={{ flex: 1, background: "#F3F4F6", display: "flex", flexDirection: "column", padding: "24px 24px" }}>
+
             {/* ── En-tête ── */}
-            <div style={{ background: C.white, marginTop:"20px", marginLeft: "18px", width:"96%", padding: "20px 16px", borderBottom: `1px solid #E5E7EB`, borderRadius:'5px', height: "60px" }}>
-                <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, color: C.textDark, padding: "0px 0px" }}>Liste des Paiements</h1>
+            <div style={{ background: "#fff", borderRadius: 8, padding: "18px 24px", marginBottom: 16, border: `1px solid #E5E7EB` }}>
+                <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: "#111827" }}>Liste des Déclarations</h1>
             </div>
 
-            <div style={{
-                background: C.white, borderRadius: 10,
-                border: `1px solid ${C.border}`, overflow: "hidden",
-                boxShadow: C.shadow,
-            }}>
-                {/* ── Barre de recherche avancée ── */}
-                <div style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <button onClick={() => setRechercheOpen(!rechercheOpen)}
+            {/* ── Recherche avancée ── */}
+            <div style={{ background: "#fff", borderRadius: 0, border: `1px solid #E5E7EB`, marginBottom: 16 }}>
+                <button onClick={() => setRechercheOpen(!rechercheOpen)}
+                        style={{
+                            width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+                            padding: "18px 24px", background: "none", border: "none", cursor: "pointer",
+                            fontSize: 15, color: "#374151", fontWeight: 500,
+                        }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        Recherche avancée
+                    </span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2"
+                         style={{ transform: rechercheOpen ? "rotate(180deg)" : "none", transition: "0.2s" }}>
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
+
+                {rechercheOpen && (
+                    <div style={{ padding: "0 24px 20px", display: "flex", gap: 12, alignItems: "center" }}>
+                        {/* Exercice */}
+                        <ExerciceSelect
+                            label="Exercice"
+                            value={pendingAnnee}
+                            onChange={(v) => setPendingAnnee(v)}
+                            options={ANNEE_OPTIONS}
+                        />
+
+                        {/* Statut */}
+                        <StatutSelect
+                            label="Statut"
+                            value={pendingStatut}
+                            onChange={(v) => setPendingStatut(v)}
+                            options={STATUT_OPTIONS}
+                        />
+
+                        {/* Bouton Rechercher */}
+                        <button
+                            onClick={() => { setFiltreAnnee(pendingAnnee); setFiltreStatut(pendingStatut); setCurrentPage(1); }}
                             style={{
-                                width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
-                                padding: "16px 24px", background: "none", border: "none", cursor: "pointer",
-                                fontSize: 14, color: "#9CA3AF",
-                            }}>
-                        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                flex: 1,
+                                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                                background: "#fff", color: "#F59E0B",
+                                border: `1.5px solid #F59E0B`, borderRadius: 6,
+                                padding: "0 24px", height: 37, fontSize: 14,
+                                fontWeight: 600, cursor: "pointer",
+                                letterSpacing: "0.05em",
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = "#FFF7ED"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = "#fff"}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2.5">
                                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                             </svg>
-                            Recherche avancée
-                        </span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                             style={{ transform: rechercheOpen ? "rotate(180deg)" : "none", transition: "0.2s" }}>
-                            <path d="M6 9l6 6 6-6"/>
-                        </svg>
-                    </button>
+                            RECHERCHER
+                        </button>
+                    </div>
+                )}
+            </div>
 
-                    {rechercheOpen && (
-                        <div style={{ padding: "0 24px 20px", display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
-                            {/* Référence — input texte libre */}
-                            <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
-                                <input
-                                    value={filtreRef}
-                                    onChange={(e) => { setFiltreRef(e.target.value); setCurrentPage(1); }}
-                                    placeholder=" "
-                                    style={{
-                                        width: "100%", boxSizing: "border-box",
-                                        border: `1.5px solid ${filtreRef ? C.orange : "#9CA3AF"}`,
-                                        borderRadius: 4, padding: "14px 36px 6px 12px",
-                                        fontSize: 14, color: C.textDark, outline: "none",
-                                        background: C.white, minHeight: 52,
-                                    }}
-                                    onFocus={(e) => e.target.style.borderColor = C.orange}
-                                    onBlur={(e) => e.target.style.borderColor = filtreRef ? C.orange : "#9CA3AF"}
-                                />
-                                <span style={{
-                                    position: "absolute", left: 10, top: filtreRef ? 4 : 16,
-                                    fontSize: filtreRef ? 10 : 14, color: filtreRef ? C.orange : "#9CA3AF",
-                                    transition: "all 0.15s", pointerEvents: "none",
-                                    background: C.white, padding: "0 2px",
-                                }}>Référence</span>
-                                {filtreRef && (
-                                    <button onClick={() => { setFiltreRef(""); setCurrentPage(1); }}
-                                            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", fontSize: 16 }}>×</button>
-                                )}
-                            </div>
+            {/* Compteur */}
+            <div style={{
+                padding: "12px 24px", textAlign: "right",
+                fontSize: 13, color: "black"
+            }}>
+                showing {paginated.length} of {sorted.length} rows
+            </div>
 
-                            {/* Année */}
-                            <OutlinedInput label="Année fiscale" value={filtreAnnee}
-                                           onClear={() => { setFiltreAnnee(""); setCurrentPage(1); }}
-                                           onClick={() => { setOpenAnnee(!openAnnee); setOpenStatut(false); }}
-                                           open={openAnnee}>
-                                {openAnnee && (
-                                    <DropdownList
-                                        options={[{ value: "", label: "Toutes" }, ...ANNEE_OPTIONS]}
-                                        value={filtreAnnee}
-                                        onChange={(v) => { setFiltreAnnee(v); setCurrentPage(1); }}
-                                        onClose={() => setOpenAnnee(false)}
-                                    />
-                                )}
-                            </OutlinedInput>
+            {/* ── Tableau ── */}
+            <div style={{ background: "#fff", borderRadius: 0, border: `1px solid #E5E7EB`, overflow: "hidden" }}>
 
-                            {/* Statut */}
-                            <OutlinedInput label="Statut" value={filtreStatut}
-                                           onClear={() => { setFiltreStatut(""); setCurrentPage(1); }}
-                                           onClick={() => { setOpenStatut(!openStatut); setOpenAnnee(false); }}
-                                           open={openStatut}>
-                                {openStatut && (
-                                    <DropdownList
-                                        options={[{ value: "", label: "Tous" }, ...STATUT_OPTIONS]}
-                                        value={filtreStatut}
-                                        onChange={(v) => { setFiltreStatut(v); setCurrentPage(1); }}
-                                        onClose={() => setOpenStatut(false)}
-                                    />
-                                )}
-                            </OutlinedInput>
-
-                            <button onClick={() => { setFiltreRef(""); setFiltreAnnee(""); setFiltreStatut(""); setCurrentPage(1); }}
-                                    style={{
-                                        background: "none", color: "#9CA3AF", border: `1px solid ${C.border}`,
-                                        borderRadius: 4, padding: "10px 16px", fontSize: 13, cursor: "pointer", height: 52,
-                                    }}>Réinitialiser</button>
-                        </div>
-                    )}
-                </div>
-
-                {/* ── Compteur ── */}
-                <div style={{
-                    padding: "10px 24px", textAlign: "right",
-                    fontSize: 12, color: "#9CA3AF", background: "#F9FAFB",
-                    borderBottom: `1px solid ${C.border}`,
-                }}>
-                    {paginated.length} sur {filtered.length} résultat{filtered.length !== 1 ? "s" : ""}
-                </div>
-
-                {/* ── Tableau ── */}
                 {loading ? (
                     <div style={{ padding: "60px", textAlign: "center", color: "#9CA3AF", fontSize: 14 }}>Chargement...</div>
                 ) : error ? (
                     <div style={{ padding: "40px", textAlign: "center", color: "#B91C1C", fontSize: 13 }}>[!] {error}</div>
                 ) : (
                     <div style={{ overflowX: "auto" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
                             <thead>
-                            <tr>
-                                <th style={thS}>Référence</th>
-                                <th style={thS}>Année fiscale</th>
-                                <th style={thS}>Structure fiscale</th>
-                                <th style={thS}>Statut</th>
-                                <th style={{ ...thS, textAlign: "right" }}>Montant</th>
-                                <th style={thS}>Date</th>
-                                <th style={{ ...thS, textAlign: "center" }}>Actions</th>
+                            <tr style={{ borderBottom: `1px solid #E5E7EB` }}>
+                                <ColHeader label="Référence de déclaration" colKey="reference"       sortConfig={sortConfig} onSort={handleSort} hiddenCols={hiddenCols} onHide={handleHide} />
+                                <ColHeader label="Année fiscale"            colKey="annee"           sortConfig={sortConfig} onSort={handleSort} hiddenCols={hiddenCols} onHide={handleHide} />
+                                <ColHeader label="Structure Fiscale"        colKey="structureFiscale" sortConfig={sortConfig} onSort={handleSort} hiddenCols={hiddenCols} onHide={handleHide} />
+                                <ColHeader label="Statut"                   colKey="statut"          sortConfig={sortConfig} onSort={handleSort} hiddenCols={hiddenCols} onHide={handleHide} />
+                                <ColHeader label="Montant à payer"          colKey="montantBrut"     sortConfig={sortConfig} onSort={handleSort} hiddenCols={hiddenCols} onHide={handleHide} align="right" />
+                                <ColHeader label="Date de soumission"       colKey="date"            sortConfig={sortConfig} onSort={handleSort} hiddenCols={hiddenCols} onHide={handleHide} />
+                                <th style={{ ...thS, textAlign: "center", padding: "13px 16px" }}>***</th>
                             </tr>
                             </thead>
                             <tbody>
                             {paginated.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} style={{ padding: "60px 24px", textAlign: "center", color: "#9CA3AF", fontSize: 14 }}>
-                                        <div style={{ fontSize: 40, marginBottom: 12 }}></div>
                                         Aucune déclaration trouvée.
                                     </td>
                                 </tr>
-                            ) : paginated.map((a) => (
-                                <tr key={a.id} style={{ borderBottom: `1px solid #F3F4F6` }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = "#FAFAFA"}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-                                    <td style={{ ...tdS, fontFamily: "monospace", color: C.orange, fontWeight: 700 }}>
-                                        {a.reference || "—"}
-                                    </td>
-                                    <td style={tdS}>{a.annee || "—"}</td>
-                                    <td style={tdS}>{a.structureFiscale || "CDI YAOUNDE 2"}</td>
-                                    <td style={tdS}><StatutBadge statut={a.statut} /></td>
-                                    <td style={{ ...tdS, textAlign: "right", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
-                                        {a.montantBrut > 0 ? Number(a.montantBrut).toLocaleString("fr-FR") + " F" : "—"}
-                                    </td>
-                                    <td style={tdS}>{fmtDate(a.date)}</td>
-                                    <td style={{ ...tdS, textAlign: "center" }}>
-                                        {a.statut?.toUpperCase() === "DRAFT" ? (
-                                            <DraftActions
+                            ) : paginated.map((a) => {
+                                const isDraft = a.statut?.toUpperCase() === "DRAFT";
+                                return (
+                                    <tr key={a.id}
+                                        style={{ borderBottom: `1px solid #F3F4F6`, transition: "background 0.1s" }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = "#FAFAFA"}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                                        <td style={{ ...tdS, fontFamily: "monospace", fontSize: 13, color: "#111827", fontWeight: 500, display: hiddenCols.includes("reference") ? "none" : undefined }}>
+                                            {a.reference || "—"}
+                                        </td>
+                                        <td style={{ ...tdS, display: hiddenCols.includes("annee") ? "none" : undefined }}>{a.annee || "—"}</td>
+                                        <td style={{ ...tdS, display: hiddenCols.includes("structureFiscale") ? "none" : undefined }}>{a.structureFiscale || "CDI YAOUNDE 1"}</td>
+                                        <td style={{ ...tdS, display: hiddenCols.includes("statut") ? "none" : undefined }}><StatutBadge statut={a.statut} /></td>
+                                        <td style={{ ...tdS, textAlign: "right", fontVariantNumeric: "tabular-nums", display: hiddenCols.includes("montantBrut") ? "none" : undefined }}>
+                                            {a.montantBrut > 0 ? Number(a.montantBrut).toLocaleString("fr-FR") : "0"}
+                                        </td>
+                                        <td style={{ ...tdS, color: "#6B7280", display: hiddenCols.includes("date") ? "none" : undefined }}>
+                                            {isDraft ? "--" : fmtDate(a.date)}
+                                        </td>
+                                        <td style={{ ...tdS, textAlign: "center" }}>
+                                            <ActionMenu
                                                 declaration={a}
+                                                contribuable={contribuable}
+                                                isDraft={isDraft}
                                                 onModifier={(decl) => onModifierDraft && onModifierDraft(decl)}
                                                 onSoumis={() => charger()}
                                             />
-                                        ) : (
-                                            <ActionMenu declaration={a} contribuable={contribuable} />
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                             </tbody>
                         </table>
                     </div>
@@ -442,24 +672,59 @@ export default function MesDeclarations({ setPage, onModifierDraft }) {
 
                 {/* ── Pagination ── */}
                 <div style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "14px 24px", borderTop: `1px solid ${C.border}`,
-                    background: C.white, flexWrap: "wrap", gap: 12,
+                    display: "flex", justifyContent: "flex-end", alignItems: "center",
+                    padding: "12px 16px", borderTop: `1px solid #E5E7EB`,
+                    background: "#fff", gap: 24,
                 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#6B7280" }}>
-                        Lignes par page :
-                        <select value={rowsPerPage}
-                                onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                                style={{ border: `1px solid ${C.border}`, borderRadius: 4, padding: "4px 8px", fontSize: 13, cursor: "pointer", outline: "none" }}>
-                            {ROWS_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
-                        </select>
+                    {/* Rows per page */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151" }}>
+                        <span style={{ whiteSpace: "nowrap" }}>Rows per page:</span>
+                        <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                            <select value={rowsPerPage}
+                                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                    style={{
+                                        appearance: "none", border: "none", background: "transparent",
+                                        fontSize: 13, color: "#374151", cursor: "pointer",
+                                        outline: "none", paddingRight: 18, fontWeight: 400,
+                                    }}>
+                                {ROWS_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+                            </select>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5"
+                                 style={{ position: "absolute", right: 0, pointerEvents: "none" }}>
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6B7280" }}>
-                        <span>{filtered.length === 0 ? "0" : (currentPage - 1) * rowsPerPage + 1}–{Math.min(currentPage * rowsPerPage, filtered.length)} sur {filtered.length}</span>
+
+                    {/* Range info */}
+                    <span style={{ fontSize: 13, color: "#374151", whiteSpace: "nowrap" }}>
+                        {sorted.length === 0 ? "0" : (currentPage - 1) * rowsPerPage + 1}–{Math.min(currentPage * rowsPerPage, sorted.length)} of {sorted.length}
+                    </span>
+
+                    {/* Nav buttons */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                         <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
-                                style={{ width: 32, height: 32, borderRadius: 4, border: `1px solid ${C.border}`, background: "none", cursor: currentPage === 1 ? "not-allowed" : "pointer", color: currentPage === 1 ? "#D1D5DB" : "#374151", fontSize: 16 }}>‹</button>
+                                style={{
+                                    width: 28, height: 28, borderRadius: 4, border: "none",
+                                    background: "none", cursor: currentPage === 1 ? "default" : "pointer",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    color: currentPage === 1 ? "#D1D5DB" : "#374151",
+                                }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M15 18l-6-6 6-6"/>
+                            </svg>
+                        </button>
                         <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
-                                style={{ width: 32, height: 32, borderRadius: 4, border: `1px solid ${C.border}`, background: "none", cursor: currentPage === totalPages ? "not-allowed" : "pointer", color: currentPage === totalPages ? "#D1D5DB" : "#374151", fontSize: 16 }}>›</button>
+                                style={{
+                                    width: 28, height: 28, borderRadius: 4, border: "none",
+                                    background: "none", cursor: currentPage === totalPages ? "default" : "pointer",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    color: currentPage === totalPages ? "#D1D5DB" : "#374151",
+                                }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>

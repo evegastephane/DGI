@@ -37,6 +37,19 @@ const BASE_COLUMNS = [
     { key: "payeLe",               label: "Payé le"                  },
 ];
 
+const ROWS_OPTIONS = [10, 25, 50];
+
+// ─── Styles communs tableau ───────────────────────────────────────────────
+const thS = {
+    padding: "0", textAlign: "left", fontSize: 13,
+    fontWeight: 500, color: "#6B7280", borderBottom: `1px solid #E5E7EB`,
+    whiteSpace: "nowrap", background: "#fff", position: "relative",
+};
+const tdS = {
+    padding: "18px 20px", fontSize: 14, color: "#111827",
+    verticalAlign: "middle", whiteSpace: "nowrap",
+};
+
 // ─── Checkbox orange ──────────────────────────────────────────────────────
 function OrangeCheckbox({ checked, onChange }) {
     return (
@@ -58,83 +71,207 @@ function OrangeCheckbox({ checked, onChange }) {
     );
 }
 
-// ─── Input outlined avec label flottant ───────────────────────────────────
-function OutlinedInput({ label, value, onClear, onClick, open, children }) {
-    const isFilled = value && value.length > 0;
+// ─── Select Exercice — label flottant + options "EXERCICE YYYY" ───────────
+function ExerciceSelect({ label, value, onChange, options }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", h);
+        return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    const isFilled = !!value;
+
     return (
-        <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-            <div
-                onClick={onClick}
-                style={{
-                    border: `1.5px solid ${open || isFilled ? C.orange : "#9CA3AF"}`,
-                    borderRadius: 4, padding: "14px 40px 6px 12px",
-                    background: C.white, cursor: "pointer", minHeight: 52,
-                    display: "flex", alignItems: "center",
-                }}
-            >
+        <div ref={ref} style={{ position: "relative", flex: 1 }}>
+            <div onClick={() => setOpen(!open)} style={{
+                position: "relative", border: `1.5px solid ${open || isFilled ? "#F59E0B" : "#D1D5DB"}`,
+                borderRadius: 4, height: 37, background: "#fff",
+                cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center", padding: "0 14px",
+            }}>
                 <span style={{
-                    position: "absolute", left: 10,
-                    top: isFilled || open ? 4 : 16,
-                    fontSize: isFilled || open ? 10 : 14,
-                    color: open || isFilled ? C.orange : "#9CA3AF",
-                    transition: "all 0.15s", pointerEvents: "none",
-                    background: C.white, padding: "0 2px", fontFamily: "Arial, sans-serif",
-                }}>
-                    {label}
+                    position: "absolute", left: 12, top: open || isFilled ? -10 : "50%",
+                    transform: open || isFilled ? "none" : "translateY(-50%)",
+                    fontSize: open || isFilled ? 11 : 14,
+                    color: open || isFilled ? "#F59E0B" : "#9CA3AF",
+                    background: "#fff", padding: "0 4px",
+                    transition: "all 0.15s", pointerEvents: "none", lineHeight: 1,
+                }}>{label}</span>
+                <span style={{ fontSize: 14, color: isFilled ? "#111827" : "transparent", marginTop: 4 }}>
+                    {isFilled ? `EXERCICE ${value}` : "\u200b"}
                 </span>
-                <span style={{
-                    fontSize: 14, color: isFilled ? C.textDark : "transparent",
-                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                    maxWidth: "calc(100% - 10px)", display: "block",
-                }}>
-                    {value || "​"}
-                </span>
+                {isFilled && (
+                    <button onClick={(e) => { e.stopPropagation(); onChange(""); }}
+                            style={{
+                                position: "absolute", right: 36, top: "50%", transform: "translateY(-50%)",
+                                background: "none", border: "none", cursor: "pointer",
+                                color: "#9CA3AF", fontSize: 16, lineHeight: 1, padding: "2px",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                            }}>×</button>
+                )}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2"
+                     style={{ position: "absolute", right: 12, top: "50%", transform: `translateY(-50%) ${open ? "rotate(180deg)" : ""}`, transition: "transform 0.2s", pointerEvents: "none" }}>
+                    <path d="M6 9l6 6 6-6"/>
+                </svg>
             </div>
-            {isFilled && (
-                <button
-                    onClick={(e) => { e.stopPropagation(); onClear(); }}
-                    style={{
-                        position: "absolute", right: 28, top: "50%", transform: "translateY(-50%)",
-                        background: "none", border: "none", cursor: "pointer",
-                        color: "#9CA3AF", fontSize: 16, lineHeight: 1, padding: "0 2px",
-                    }}
-                >×</button>
+            {open && (
+                <div style={{
+                    position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 200,
+                    background: "#fff", border: `1px solid #E5E7EB`,
+                    borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", overflow: "hidden",
+                }}>
+                    {options.map((opt) => (
+                        <div key={opt.value ?? opt}
+                             onClick={() => { onChange(opt.value ?? opt); setOpen(false); }}
+                             style={{
+                                 padding: "13px 16px", fontSize: 14, cursor: "pointer",
+                                 color: "#374151", fontWeight: 400,
+                                 borderBottom: `1px solid #F3F4F6`, background: "transparent",
+                             }}
+                             onMouseEnter={(e) => e.currentTarget.style.background = "#F9FAFB"}
+                             onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                            EXERCICE {opt.value ?? opt}
+                        </div>
+                    ))}
+                </div>
             )}
-            <span style={{
-                position: "absolute", right: 8, top: "50%",
-                transform: `translateY(-50%) ${open ? "rotate(180deg)" : ""}`,
-                pointerEvents: "none", color: "#9CA3AF", fontSize: 12, transition: "transform 0.15s",
-            }}>▼</span>
-            {children}
+        </div>
+    );
+}
+
+// ─── Select Statut — label flottant + checkboxes ──────────────────────────
+function StatutSelect({ label, value, onChange, options }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener("mousedown", h);
+        return () => document.removeEventListener("mousedown", h);
+    }, []);
+
+    const isFilled = value && value.length > 0;
+
+    return (
+        <div ref={ref} style={{ position: "relative", flex: 1 }}>
+            <div onClick={() => setOpen(!open)} style={{
+                position: "relative", border: `1.5px solid ${open || isFilled ? "#F59E0B" : "#D1D5DB"}`,
+                borderRadius: 4, height: 37, background: "#fff",
+                cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center", padding: "0 14px",
+            }}>
+                <span style={{
+                    position: "absolute", left: 12, top: open || isFilled ? -10 : "50%",
+                    transform: open || isFilled ? "none" : "translateY(-50%)",
+                    fontSize: open || isFilled ? 11 : 14,
+                    color: open || isFilled ? "#F59E0B" : "#9CA3AF",
+                    background: "#fff", padding: "0 4px",
+                    transition: "all 0.15s", pointerEvents: "none", lineHeight: 1,
+                }}>{label}</span>
+                <span style={{
+                    fontSize: 14, color: isFilled ? "#111827" : "transparent",
+                    marginTop: 4,
+                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                    maxWidth: "calc(100% - 40px)",
+                }}>
+                    {isFilled ? value : "\u200b"}
+                </span>
+                {isFilled && (
+                    <button onClick={(e) => { e.stopPropagation(); onChange([]); }}
+                            style={{
+                                position: "absolute", right: 36, top: "50%", transform: "translateY(-50%)",
+                                background: "none", border: "none", cursor: "pointer",
+                                color: "#9CA3AF", fontSize: 16, lineHeight: 1, padding: "2px",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                            }}>×</button>
+                )}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2"
+                     style={{ position: "absolute", right: 12, top: "50%", transform: `translateY(-50%) ${open ? "rotate(180deg)" : ""}`, transition: "transform 0.2s", pointerEvents: "none" }}>
+                    <path d="M6 9l6 6 6-6"/>
+                </svg>
+            </div>
+            {open && (
+                <div style={{
+                    position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 200,
+                    background: "#fff", border: `1px solid #E5E7EB`,
+                    borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", overflow: "hidden",
+                }}>
+                    {/* Tout */}
+                    <div onClick={() => onChange([])}
+                         style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 16px", cursor: "pointer", borderBottom: `1px solid #F3F4F6`, background: "transparent" }}
+                         onMouseEnter={(e) => e.currentTarget.style.background = "#F9FAFB"}
+                         onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                        <span style={{
+                            width: 18, height: 18, borderRadius: 3, flexShrink: 0,
+                            border: `2px solid ${!isFilled ? "#F59E0B" : "#D1D5DB"}`,
+                            background: !isFilled ? "#FFF7ED" : "#fff",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                            {!isFilled && (
+                                <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                                    <path d="M2 6l3 3 5-5" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            )}
+                        </span>
+                        <span style={{ fontSize: 14, color: "#9CA3AF", fontWeight: !isFilled ? 500 : 400 }}>Tout</span>
+                    </div>
+                    {options.map((opt) => {
+                        const checked = Array.isArray(value) && value.length === 1 && value[0] === opt.value;
+                        return (
+                            <div key={opt.value}
+                                 onClick={() => { onChange([opt.value]); setOpen(false); }}
+                                 style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 16px", cursor: "pointer", borderBottom: `1px solid #F3F4F6`, background: "transparent" }}
+                                 onMouseEnter={(e) => e.currentTarget.style.background = "#F9FAFB"}
+                                 onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                                <span style={{
+                                    width: 18, height: 18, borderRadius: 3, flexShrink: 0,
+                                    border: `2px solid ${checked ? "#F59E0B" : "#D1D5DB"}`,
+                                    background: checked ? "#FFF7ED" : "#fff",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                }}>
+                                    {checked && (
+                                        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                                            <path d="M2 6l3 3 5-5" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                    )}
+                                </span>
+                                <span style={{ fontSize: 14, color: "#374151", fontWeight: checked ? 500 : 400, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                                    {opt.label}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
 
 // ─── Badge statut paiement ────────────────────────────────────────────────
 function Badge({ statut }) {
-    // Clés en minuscules ET en majuscules pour compatibilité backend/frontend
     const map = {
-        // Statuts paiement mobile
         "IN_PROGRESS":   { label: "PAIEMENT INITIE",  bg: "#FEF3C7", color: "#D97706" },
         "SUCCESS":       { label: "ABOUTI",            bg: "#DCFCE7", color: "#16A34A" },
         "FAILED":        { label: "ECHOUE",            bg: "#FEE2E2", color: "#DC2626" },
-        // Anciens statuts backend
         "PAID":          { label: "PAYE",              bg: "#DCFCE7", color: "#16A34A" },
         "PENDING":       { label: "EN ATTENTE",        bg: "#FEF9C3", color: "#92400E" },
         "REJECTED":      { label: "REJETE",            bg: "#FEE2E2", color: "#DC2626" },
         "PARTIAL":       { label: "PARTIEL",           bg: "#DBEAFE", color: "#1D4ED8" },
-        // Formes FR (legacy)
         "paye":          { label: "PAYE",              bg: "#DCFCE7", color: "#16A34A" },
         "en_attente":    { label: "EN ATTENTE",        bg: "#FEF9C3", color: "#92400E" },
         "partiel":       { label: "PARTIEL",           bg: "#DBEAFE", color: "#1D4ED8" },
         "rejete":        { label: "REJETE",            bg: "#FEE2E2", color: "#DC2626" },
-        // Backend legacy
         "EFFECTUE":      { label: "EFFECTUE",          bg: "#DCFCE7", color: "#16A34A" },
         "INITIE":        { label: "PAIEMENT INITIE",   bg: "#FEF3C7", color: "#D97706" },
     };
     const s = map[statut] ?? { label: statut?.toUpperCase() ?? "—", bg: "#F3F4F6", color: "#6B7280" };
     return (
-        <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 12, background: s.bg, color: s.color }}>
+        <span style={{
+            fontSize: 11, fontWeight: 700, padding: "3px 12px", borderRadius: 999,
+            background: s.bg, color: s.color, display: "inline-block",
+            textTransform: "uppercase", letterSpacing: "0.05em",
+        }}>
             {s.label}
         </span>
     );
@@ -157,31 +294,30 @@ function ColumnMenu({ colKey, onSort, onHide, onManage, onClose }) {
     }, [onClose]);
 
     const item = (onClick, icon, label) => (
-        <button
-            onClick={onClick}
-            style={{
-                display: "flex", alignItems: "center", gap: 10, width: "100%",
-                padding: "10px 16px", border: "none", background: "transparent",
-                cursor: "pointer", fontSize: 13, color: C.textDark, textAlign: "left",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = C.orangeBg)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-        >
-            {icon} {label}
+        <button onClick={onClick}
+                style={{
+                    display: "flex", alignItems: "center", gap: 12, width: "100%",
+                    padding: "11px 16px", border: "none", background: "transparent",
+                    cursor: "pointer", fontSize: 13, color: "#374151", textAlign: "left",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#F9FAFB"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+            <span style={{ color: "#9CA3AF", display: "flex" }}>{icon}</span>
+            {label}
         </button>
     );
 
     return (
         <div ref={ref} style={{
-            position: "absolute", top: "calc(100% + 2px)", left: 0, zIndex: 999,
-            background: C.white, border: `1px solid ${C.border}`,
-            borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", minWidth: 200, overflow: "hidden",
+            position: "absolute", top: "calc(100% + 2px)", left: 0, zIndex: 400,
+            background: "#fff", border: `1px solid #E5E7EB`,
+            borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.13)", minWidth: 200, overflow: "hidden",
         }}>
             {item(() => { onSort(colKey, "asc");  onClose(); }, <IcoUp />,     "Sort by ASC"    )}
             {item(() => { onSort(colKey, "desc"); onClose(); }, <IcoDown />,   "Sort by DESC"   )}
-            <div style={{ borderTop: `1px solid #F3F4F6`, margin: "4px 0" }} />
+            <div style={{ height: 1, background: "#F3F4F6", margin: "2px 0" }} />
             {item(() => onClose(),                              <IcoFilter />, "Filter"         )}
-            <div style={{ borderTop: `1px solid #F3F4F6`, margin: "4px 0" }} />
+            <div style={{ height: 1, background: "#F3F4F6", margin: "2px 0" }} />
             {item(() => { onHide(colKey); onClose(); },         <IcoHide />,   "Hide column"    )}
             {item(() => { onManage(); onClose(); },             <IcoCols />,   "Manage columns" )}
         </div>
@@ -196,23 +332,23 @@ function ManageColumnsModal({ allColumns, hiddenCols, onToggle, onClose }) {
             zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center",
         }}>
             <div onClick={(e) => e.stopPropagation()} style={{
-                background: C.white, borderRadius: 10, width: 380, maxWidth: "90vw",
+                background: "#fff", borderRadius: 10, width: 380, maxWidth: "90vw",
                 boxShadow: "0 20px 60px rgba(0,0,0,0.2)", overflow: "hidden",
             }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid ${C.border}` }}>
-                    <span style={{ fontWeight: 700, fontSize: 15, color: C.textDark }}>Gérer les colonnes</span>
-                    <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: C.textGrey }}>X</button>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: `1px solid #E5E7EB` }}>
+                    <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>Gérer les colonnes</span>
+                    <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#6B7280" }}>×</button>
                 </div>
                 <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
                     {allColumns.map((col) => (
-                        <label key={col.key} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14, color: C.textDark }}>
+                        <label key={col.key} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14, color: "#111827" }}>
                             <OrangeCheckbox checked={!hiddenCols.includes(col.key)} onChange={() => onToggle(col.key)} />
                             {col.label}
                         </label>
                     ))}
                 </div>
-                <div style={{ padding: "12px 20px", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "flex-end" }}>
-                    <button onClick={onClose} style={{ padding: "8px 22px", background: C.orange, color: C.white, border: "none", borderRadius: 6, fontWeight: 700, cursor: "pointer" }}>
+                <div style={{ padding: "12px 20px", borderTop: `1px solid #E5E7EB`, display: "flex", justifyContent: "flex-end" }}>
+                    <button onClick={onClose} style={{ padding: "8px 22px", background: C.orange, color: "#fff", border: "none", borderRadius: 6, fontWeight: 700, cursor: "pointer" }}>
                         Fermer
                     </button>
                 </div>
@@ -225,9 +361,12 @@ function ManageColumnsModal({ allColumns, hiddenCols, onToggle, onClose }) {
 export default function PageListeDesPaiements() {
     const [rechercheOuverte, setRechercheOuverte] = useState(false);
     const [exerciceSaisi,    setExerciceSaisi]    = useState("");
-    const [exerciceOpen,     setExerciceOpen]     = useState(false);
-    const [statutOpen,       setStatutOpen]       = useState(false);
     const [statutsSelec,     setStatutsSelec]     = useState([]);
+
+    // Valeurs "en attente" — appliquées uniquement au clic sur Rechercher
+    const [pendingExercice,  setPendingExercice]  = useState("");
+    const [pendingStatuts,   setPendingStatuts]   = useState([]);
+
     const [sortKey,          setSortKey]          = useState(null);
     const [sortDir,          setSortDir]          = useState("asc");
     const [hiddenCols,       setHiddenCols]       = useState([]);
@@ -237,18 +376,8 @@ export default function PageListeDesPaiements() {
     const [totalPaiements,   setTotalPaiements]   = useState(0);
     const [loading,          setLoading]          = useState(true);
 
-    const exerciceRef = useRef(null);
-    const statutRef   = useRef(null);
-
-    // ── Fermer les dropdowns au clic extérieur ──
-    useEffect(() => {
-        const h = (e) => {
-            if (exerciceRef.current && !exerciceRef.current.contains(e.target)) setExerciceOpen(false);
-            if (statutRef.current   && !statutRef.current.contains(e.target))   setStatutOpen(false);
-        };
-        document.addEventListener("mousedown", h);
-        return () => document.removeEventListener("mousedown", h);
-    }, []);
+    const [rowsPerPage,  setRowsPerPage]  = useState(10);
+    const [currentPage,  setCurrentPage]  = useState(1);
 
     // ── Chargement initial depuis l'API ──
     useEffect(() => {
@@ -263,7 +392,6 @@ export default function PageListeDesPaiements() {
     }, []);
 
     // ── Auto-rafraîchissement si des paiements sont IN_PROGRESS ──
-    // La liste se met à jour toutes les 8s tant qu'un paiement est en cours
     useEffect(() => {
         const hasInProgress = paiementsFiltres.some(
             (p) => p.statutPaiement === "IN_PROGRESS" || p.statut === "INITIE"
@@ -283,20 +411,19 @@ export default function PageListeDesPaiements() {
         return () => clearInterval(interval);
     }, [paiementsFiltres]);
 
-    const toggleStatut  = (val) => setStatutsSelec((p) => p.includes(val) ? p.filter((s) => s !== val) : [...p, val]);
-    const toggleTout    = () => setStatutsSelec([]);
-    const statutAffiche = statutsSelec.length > 0 ? statutsSelec.join(", ") : "";
     const handleSort    = (key, dir) => { setSortKey(key); setSortDir(dir); };
     const handleHide    = (key) => setHiddenCols((p) => [...p, key]);
     const toggleCol     = (key) => setHiddenCols((p) => p.includes(key) ? p.filter((k) => k !== key) : [...p, key]);
 
-    // ── Recherche avec filtres ──
+    // ── Recherche au clic uniquement ──
     const handleRechercher = async () => {
+        setExerciceSaisi(pendingExercice);
+        setStatutsSelec(pendingStatuts);
         try {
             setLoading(true);
             const result = await getPaiements({
-                anneeFiscale: exerciceSaisi ? parseInt(exerciceSaisi) : undefined,
-                statuts:      statutsSelec,
+                anneeFiscale: pendingExercice ? parseInt(pendingExercice) : undefined,
+                statuts:      pendingStatuts.length > 0 ? pendingStatuts : undefined,
                 sortKey:      sortKey ?? undefined,
                 sortDir:      sortDir,
             });
@@ -305,20 +432,7 @@ export default function PageListeDesPaiements() {
             console.error("Erreur lors de la recherche :", err);
         } finally {
             setLoading(false);
-        }
-    };
-
-    // ── Reset filtre exercice ──
-    const handleClearExercice = async () => {
-        setExerciceSaisi("");
-        try {
-            setLoading(true);
-            const result = await getPaiements({ statuts: statutsSelec });
-            setPaiementsFiltres(result);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
+            setCurrentPage(1);
         }
     };
 
@@ -328,179 +442,109 @@ export default function PageListeDesPaiements() {
         return sortDir === "asc" ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
     });
 
+    const totalPages = Math.max(1, Math.ceil(sorted.length / rowsPerPage));
+    const paginated  = sorted.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
     const visibleColumns = BASE_COLUMNS.filter((c) => !hiddenCols.includes(c.key));
 
-    const thStyle = {
-        padding: 0, textAlign: "left", fontSize: 13, fontWeight: 500,
-        color: C.textMid, background: C.white,
-        borderBottom: `2px solid #E5E7EB`, borderRight: `1px solid #E5E7EB`,
-        position: "relative", whiteSpace: "nowrap",
-    };
-    const tdStyle = {
-        padding: "14px 20px", fontSize: 14, color: C.textDark,
-        borderBottom: `1px solid #F3F4F6`, verticalAlign: "middle", whiteSpace: "nowrap",
-    };
+    const statutAffiche = pendingStatuts.length > 0 ? pendingStatuts.join(", ") : "";
 
     return (
         <main style={{ flex: 1, background: "#F3F4F6", display: "flex", flexDirection: "column" }}>
 
             {/* ── Titre ── */}
-            <div style={{ background: C.white, marginTop:"20px", marginLeft: "18px", width:"96%", padding: "20px 16px", borderBottom: `1px solid #E5E7EB`, borderRadius:'5px', height: "60px" }}>
-                <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, color: C.textDark, padding: "0px 0px" }}>Liste des Paiements</h1>
+            <div style={{ background: "#fff", marginTop: "20px", marginLeft: "18px", width: "96%", padding: "20px 16px", borderBottom: `1px solid #E5E7EB`, borderRadius: "5px", height: "60px" }}>
+                <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, color: "#111827", padding: "0px 0px" }}>Liste des Paiements</h1>
             </div>
 
-            <div style={{ padding: "25px 0 40px" }}>
+            {/* ── Recherche avancée ── */}
+            <div style={{ background: "#fff", width: "96%", marginLeft: "18px", marginTop: 15, border: `1px solid #E5E7EB`, borderRadius: 0 }}>
+                <button onClick={() => setRechercheOuverte(!rechercheOuverte)}
+                        style={{
+                            width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+                            padding: "18px 24px", background: "none", border: "none", cursor: "pointer",
+                            fontSize: 15, color: "#374151", fontWeight: 500,
+                        }}>
+                    <span>Recherche avancée</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2"
+                         style={{ transform: rechercheOuverte ? "rotate(180deg)" : "none", transition: "0.2s" }}>
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
 
-                {/* ── Recherche avancée ── */}
-                <div style={{ background: C.white, width:"96%", marginLeft: "18px" }}>
-                    <div
-                        onClick={() => setRechercheOuverte(!rechercheOuverte)}
-                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 28px", cursor: "pointer", userSelect: "none" }}
-                    >
-                        <span style={{ fontWeight: 600, fontSize: 16, color: C.textDark, marginLeft: "-15px" }}>Recherche avancée</span>
-                        <span style={{ fontSize: 18, color: C.textGrey }}>{rechercheOuverte ? <ChevUp /> : <ChevDown />}</span>
+                {rechercheOuverte && (
+                    <div style={{ padding: "0 24px 20px", display: "flex", gap: 12, alignItems: "center" }}>
+
+                        {/* Exercice */}
+                        <ExerciceSelect
+                            label="Exercice"
+                            value={pendingExercice}
+                            onChange={(v) => setPendingExercice(v)}
+                            options={EXERCICE_OPTIONS.map(v => ({ value: v, label: v }))}
+                        />
+
+                        {/* Statut */}
+                        <StatutSelect
+                            label="Statut"
+                            value={pendingStatuts}
+                            onChange={(v) => setPendingStatuts(v)}
+                            options={STATUT_OPTIONS}
+                        />
+
+                        {/* Bouton RECHERCHER */}
+                        <button
+                            onClick={handleRechercher}
+                            style={{
+                                flex: 1,
+                                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                                background: "#fff", color: "#F59E0B",
+                                border: `1.5px solid #F59E0B`, borderRadius: 4,
+                                padding: "0 24px", height: 37, fontSize: 14,
+                                fontWeight: 600, cursor: "pointer", letterSpacing: "0.05em",
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = "#FFF7ED"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = "#fff"}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2.5">
+                                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            RECHERCHER
+                        </button>
                     </div>
+                )}
+            </div>
 
-                    {rechercheOuverte && (
-                        <div style={{ display: "flex", gap: 16, padding: "4px 28px 24px", alignItems: "flex-end", flexWrap: "wrap" }}>
+            {/* ── Compteur rows ── */}
+            <div style={{ padding: "12px 24px", textAlign: "right", fontSize: 13, color: "black" }}>
+                {loading ? "Chargement..." : (
+                    <span>
+                        showing {paginated.length} of {sorted.length} rows
+                        {paiementsFiltres.some(p => p.statutPaiement === "IN_PROGRESS" || p.statut === "INITIE") && (
+                            <span style={{ marginLeft: 12, color: "#D97706", fontWeight: 600 }}>
+                                — Actualisation automatique en cours...
+                            </span>
+                        )}
+                    </span>
+                )}
+            </div>
 
-                            {/* Exercice */}
-                            <div ref={exerciceRef} style={{ flex: 1, minWidth: 200, position: "relative" }}>
-                                <OutlinedInput
-                                    label="Exercice"
-                                    value={exerciceSaisi ? `EXERCICE ${exerciceSaisi}` : ""}
-                                    onClear={handleClearExercice}
-                                    onClick={() => setExerciceOpen(!exerciceOpen)}
-                                    open={exerciceOpen}
-                                >
-
-                                    {exerciceOpen && (
-                                        <div style={{
-                                            position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 100,
-                                            background: C.white, border: `1px solid ${C.border}`,
-                                            borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", overflow: "hidden",
-                                        }}>
-
-                                            {EXERCICE_OPTIONS.map((ex) => (
-                                                <div
-                                                    key={ex}
-                                                    onClick={() => { setExerciceSaisi(ex); setExerciceOpen(false); }}
-                                                    style={{
-                                                        padding: "11px 16px", cursor: "pointer", fontSize: 14,
-                                                        background: exerciceSaisi === ex ? C.orangeBg : "transparent",
-                                                        color: exerciceSaisi === ex ? C.orange : C.textDark,
-                                                        fontWeight: exerciceSaisi === ex ? 600 : 400,
-                                                    }}
-                                                    onMouseEnter={(e) => { if (exerciceSaisi !== ex) e.currentTarget.style.background = "#F9FAFB"; }}
-                                                    onMouseLeave={(e) => { e.currentTarget.style.background = exerciceSaisi === ex ? C.orangeBg : "transparent"; }}
-                                                >
-                                                    EXERCICE {ex}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </OutlinedInput>
-                            </div>
-
-                            {/* Statut */}
-                            <div ref={statutRef} style={{ flex: 1, minWidth: 200, position: "relative" }}>
-                                <OutlinedInput
-                                    label="Statut"
-                                    value={statutAffiche}
-                                    onClear={() => setStatutsSelec([])}
-                                    onClick={() => setStatutOpen(!statutOpen)}
-                                    open={statutOpen}
-                                >
-                                    {statutOpen && (
-                                        <div style={{
-                                            position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 100,
-                                            background: C.white, border: `1px solid ${C.border}`,
-                                            borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", overflow: "hidden",
-                                        }}>
-                                            <div
-                                                onClick={toggleTout}
-                                                style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", cursor: "pointer", borderBottom: `1px solid #F3F4F6` }}
-                                                onMouseEnter={(e) => (e.currentTarget.style.background = "#F9FAFB")}
-                                                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                            >
-                                                <OrangeCheckbox checked={statutsSelec.length === 0} onChange={toggleTout} />
-                                                <span style={{ fontSize: 14, color: C.textMid }}>Tout</span>
-                                            </div>
-                                            {STATUT_OPTIONS.map(({ value, label }) => {
-                                                const checked = statutsSelec.includes(value);
-                                                return (
-                                                    <div
-                                                        key={value}
-                                                        onClick={() => toggleStatut(value)}
-                                                        style={{
-                                                            display: "flex", alignItems: "center", gap: 12,
-                                                            padding: "13px 16px", cursor: "pointer",
-                                                            background: checked ? C.orangeBg : "transparent",
-                                                            borderBottom: `1px solid #F3F4F6`,
-                                                        }}
-                                                        onMouseEnter={(e) => { if (!checked) e.currentTarget.style.background = "#F9FAFB"; }}
-                                                        onMouseLeave={(e) => { e.currentTarget.style.background = checked ? C.orangeBg : "transparent"; }}
-                                                    >
-                                                        <OrangeCheckbox checked={checked} onChange={() => toggleStatut(value)} />
-                                                        <span style={{ fontSize: 14, color: checked ? C.textDark : C.textMid, fontWeight: checked ? 600 : 400 }}>
-                                                            {label}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </OutlinedInput>
-                            </div>
-
-                            {/* Bouton RECHERCHER */}
-                            <button
-                                onClick={handleRechercher}
-                                style={{
-                                    flex: 1, minWidth: 180, display: "flex", alignItems: "center", justifyContent: "center",
-                                    gap: 8, border: `1.5px solid ${C.orange}`, background: C.white,
-                                    color: C.orange, borderRadius: 4, padding: "14px 20px",
-                                    fontWeight: 700, fontSize: 14, cursor: "pointer", letterSpacing: 0.8, height: 52,
-                                }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = C.orangeBg)}
-                                onMouseLeave={(e) => (e.currentTarget.style.background = C.white)}
-                            >
-                                RECHERCHER
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                {/* ── Compteur rows ── */}
-                <div style={{ background: "#F3F4F6", padding: "10px 28px", textAlign: "right", fontSize: 13, color: C.textGrey }}>
-                    {loading ? "Chargement..." : (
-                        <span>
-                            {sorted.length} sur {totalPaiements} paiements
-                            {paiementsFiltres.some(p => p.statutPaiement === "IN_PROGRESS" || p.statut === "INITIE") && (
-                                <span style={{ marginLeft: 12, color: "#D97706", fontWeight: 600 }}>
-                                    — Actualisation automatique en cours...
-                                </span>
-                            )}
-                        </span>
-                    )}
-                </div>
-
-                {/* ── Tableau ── */}
-                <div style={{ background: C.white, overflowX: "auto", width:"96%", marginLeft: "18px", border:'1px solid lightGray' }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900, marginBottom: 200}}>
+            {/* ── Tableau ── */}
+            <div style={{ background: "#fff", borderRadius: 0, border: `1px solid #E5E7EB`, overflow: "hidden", width: "96%", marginLeft: "18px" }}>
+                <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
                         <thead>
-                        <tr>
+                        <tr style={{ borderBottom: `1px solid #E5E7EB` }}>
                             {visibleColumns.map((col) => (
-                                <th key={col.key} style={thStyle}>
-                                    <div
-                                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", gap: 6, fontSize: 11 }}
-                                        onMouseEnter={(e) => { const btn = e.currentTarget.querySelector(".col-menu-btn"); if (btn) btn.style.opacity = "1"; }}
-                                        onMouseLeave={(e) => { const btn = e.currentTarget.querySelector(".col-menu-btn"); if (btn && openMenu !== col.key) btn.style.opacity = "0"; }}
-                                    >
+                                <th key={col.key} style={thS}>
+                                    <div style={{
+                                        display: "flex", alignItems: "center", gap: 6,
+                                        padding: "13px 12px 13px 20px",
+                                    }}
+                                         onMouseEnter={(e) => { const btn = e.currentTarget.querySelector(".col-menu-btn"); if (btn) btn.style.color = "#6B7280"; }}
+                                         onMouseLeave={(e) => { const btn = e.currentTarget.querySelector(".col-menu-btn"); if (btn && openMenu !== col.key) btn.style.color = "transparent"; }}>
                                         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                             {col.label}
                                             {sortKey === col.key && (
-                                                <span style={{ color: C.orange }}>
+                                                <span style={{ color: "#F59E0B" }}>
                                                     {sortDir === "asc" ? <IcoUp /> : <IcoDown />}
                                                 </span>
                                             )}
@@ -510,11 +554,11 @@ export default function PageListeDesPaiements() {
                                             onClick={(e) => { e.stopPropagation(); setOpenMenu(openMenu === col.key ? null : col.key); }}
                                             style={{
                                                 background: "none", border: "none", cursor: "pointer",
-                                                color: C.textGrey, padding: "2px 4px", borderRadius: 4,
-                                                opacity: openMenu === col.key ? "1" : "0",
-                                                transition: "opacity 0.15s", fontSize: 18, lineHeight: 1,
-                                            }}
-                                        >⋮</button>
+                                                padding: "2px 4px", borderRadius: 3, marginLeft: "auto",
+                                                color: openMenu === col.key ? "#6B7280" : "transparent",
+                                                transition: "color 0.15s",
+                                                fontSize: 16, lineHeight: 1, letterSpacing: 1,
+                                            }}>⋮</button>
                                     </div>
                                     {openMenu === col.key && (
                                         <ColumnMenu
@@ -532,28 +576,89 @@ export default function PageListeDesPaiements() {
                         <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={visibleColumns.length} style={{ padding: "60px 20px", textAlign: "center", color: C.textGrey, fontSize: 14 }}>
+                                <td colSpan={visibleColumns.length} style={{ padding: "60px 20px", textAlign: "center", color: "#9CA3AF", fontSize: 14 }}>
                                     Chargement des paiements...
                                 </td>
                             </tr>
-                        ) : sorted.length === 0 ? (
+                        ) : paginated.length === 0 ? (
                             <tr>
-                                <td colSpan={visibleColumns.length} style={{ padding: "60px 20px", textAlign: "center", color: C.textGrey, fontSize: 14 }}>
-                                    Aucun paiement ne correspond aux critères sélectionnés.
+                                <td colSpan={visibleColumns.length} style={{ padding: "60px 20px", textAlign: "center", color: "#9CA3AF", fontSize: 14 }}>
+                                    {exerciceSaisi
+                                        ? `Aucun paiement trouvé pour l'exercice ${exerciceSaisi}.`
+                                        : "Aucun paiement ne correspond aux critères sélectionnés."
+                                    }
                                 </td>
                             </tr>
                         ) : (
-                            sorted.map((paiement, i) => (
+                            paginated.map((paiement, i) => (
                                 <LignePaiement
                                     key={paiement.id ?? i}
                                     paiement={paiement}
                                     visibleColumns={visibleColumns}
-                                    tdStyle={tdStyle}
+                                    tdStyle={tdS}
                                 />
                             ))
                         )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* ── Pagination ── */}
+                <div style={{
+                    display: "flex", justifyContent: "flex-end", alignItems: "center",
+                    padding: "12px 16px", borderTop: `1px solid #E5E7EB`,
+                    background: "#fff", gap: 24,
+                }}>
+                    {/* Rows per page */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151" }}>
+                        <span style={{ whiteSpace: "nowrap" }}>Rows per page:</span>
+                        <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                            <select value={rowsPerPage}
+                                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                    style={{
+                                        appearance: "none", border: "none", background: "transparent",
+                                        fontSize: 13, color: "#374151", cursor: "pointer",
+                                        outline: "none", paddingRight: 18, fontWeight: 400,
+                                    }}>
+                                {ROWS_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+                            </select>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5"
+                                 style={{ position: "absolute", right: 0, pointerEvents: "none" }}>
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    {/* Range info */}
+                    <span style={{ fontSize: 13, color: "#374151", whiteSpace: "nowrap" }}>
+                        {sorted.length === 0 ? "0" : (currentPage - 1) * rowsPerPage + 1}–{Math.min(currentPage * rowsPerPage, sorted.length)} of {sorted.length}
+                    </span>
+
+                    {/* Nav buttons */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+                                style={{
+                                    width: 28, height: 28, borderRadius: 4, border: "none",
+                                    background: "none", cursor: currentPage === 1 ? "default" : "pointer",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    color: currentPage === 1 ? "#D1D5DB" : "#374151",
+                                }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M15 18l-6-6 6-6"/>
+                            </svg>
+                        </button>
+                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                                style={{
+                                    width: 28, height: 28, borderRadius: 4, border: "none",
+                                    background: "none", cursor: currentPage === totalPages ? "default" : "pointer",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    color: currentPage === totalPages ? "#D1D5DB" : "#374151",
+                                }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -589,19 +694,15 @@ function LignePaiement({ paiement, visibleColumns, tdStyle }) {
                 });
             default:
                 const valeur = paiement[col.key];
-                // Si c'est un nombre et que c'est NaN, on affiche un tiret
-                if (typeof valeur === 'number' && isNaN(valeur)) return "—";
-                // Sinon, on affiche la valeur ou un tiret si null/undefined
+                if (typeof valeur === "number" && isNaN(valeur)) return "—";
                 return valeur ?? "—";
         }
     };
 
     return (
-        <tr
-            style={{ borderBottom: `1px solid #F3F4F6` }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#FFFBF4")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-        >
+        <tr style={{ borderBottom: `1px solid #F3F4F6`, transition: "background 0.1s" }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "#FAFAFA"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
             {visibleColumns.map((col) => (
                 <td key={col.key} style={tdStyle}>{getCellValue(col)}</td>
             ))}
