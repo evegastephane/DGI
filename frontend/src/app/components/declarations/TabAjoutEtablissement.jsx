@@ -169,6 +169,8 @@ function CommuneSelect({ value, onChange }) {
 }
 
 // ─── Champ label flottant ──────────────────────────────────────────────────
+// CORRECTION : paddingRight réservé pour FCFA, span FCFA ancré en bas de l'input
+// pour ne jamais chevaucher la valeur saisie.
 function Champ({ label, value, onChange, type = "text", placeholder = "" }) {
     const [focus, setFocus] = useState(false);
     const isNum = type === "number";
@@ -203,8 +205,11 @@ function Champ({ label, value, onChange, type = "text", placeholder = "" }) {
                 onFocus={() => setFocus(true)}
                 onBlur={() => setFocus(false)}
                 style={{
-                    width: "100%", border: `1.5px solid ${focus ? C.orange : "#E5E7EB"}`,
-                    borderRadius: 8, padding: "12px 14px",
+                    width: "100%",
+                    border: `1.5px solid ${focus ? C.orange : "#E5E7EB"}`,
+                    borderRadius: 8,
+                    padding: "12px 14px",
+                    paddingRight: isNum ? 52 : 14,
                     fontSize: 14, color: C.textDark, background: "#fff",
                     outline: "none", boxSizing: "border-box",
                     transition: "border-color 0.15s, box-shadow 0.15s",
@@ -212,10 +217,11 @@ function Champ({ label, value, onChange, type = "text", placeholder = "" }) {
                     textAlign: isNum ? "right" : "left",
                 }}
             />
-            {isNum && value && (
+            {isNum && (
                 <span style={{
-                    position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)",
-                    fontSize: 12, color: "#9CA3AF", pointerEvents: "none",
+                    position: "absolute", right: 14, bottom: 13,
+                    fontSize: 11, color: "#9CA3AF",
+                    pointerEvents: "none", userSelect: "none",
                 }}>FCFA</span>
             )}
         </div>
@@ -225,7 +231,7 @@ function Champ({ label, value, onChange, type = "text", placeholder = "" }) {
 // ─── Composant principal ───────────────────────────────────────────────────
 export default function TabAjoutEtablissement({ declarationContext }) {
     const [etablissements, setEtablissements] = useState([]);
-    const [selectionne,    setSelectionne]    = useState(null); // index ou null
+    const [selectionne,    setSelectionne]    = useState(null);
     const [form,           setForm]           = useState(VIDE);
     const [loading,        setLoading]        = useState(true);
     const [saving,         setSaving]         = useState(false);
@@ -245,7 +251,6 @@ export default function TabAjoutEtablissement({ declarationContext }) {
 
     const setChamp = (key) => (val) => setForm((f) => ({ ...f, [key]: val }));
 
-    // Mapper un objet établissement backend → état du formulaire
     const mapVersForm = (e) => ({
         nomEtablissement:         e.nom || e.nomEtablissement || "",
         typeActivites:            e.typeActivites    || "",
@@ -259,7 +264,6 @@ export default function TabAjoutEtablissement({ declarationContext }) {
         caJeuxEtDivertissement:   e.caJeuxEtDivertissement      != null ? String(e.caJeuxEtDivertissement)     : "",
     });
 
-    // Mapper le formulaire → payload API
     const mapVersApi = (f, idContribuable) => ({
         nom:                         f.nomEtablissement,
         idContribuable:              idContribuable,
@@ -284,7 +288,6 @@ export default function TabAjoutEtablissement({ declarationContext }) {
         setSelectionne(null); setForm(VIDE); setSucces(false); setErreur(null);
     };
 
-    // ── Créer ──────────────────────────────────────────────────────────────
     const handleEnregistrer = async () => {
         if (!form.nomEtablissement.trim()) { setErreur("Le nom de l'établissement est obligatoire."); return; }
         setSaving(true); setErreur(null); setSucces(false);
@@ -298,7 +301,6 @@ export default function TabAjoutEtablissement({ declarationContext }) {
         } finally { setSaving(false); }
     };
 
-    // ── Modifier ───────────────────────────────────────────────────────────
     const handleModifier = async () => {
         if (!form.nomEtablissement.trim()) { setErreur("Le nom de l'établissement est obligatoire."); return; }
         const id = etablissements[selectionne]?.idEtablissement;
@@ -314,7 +316,6 @@ export default function TabAjoutEtablissement({ declarationContext }) {
         } finally { setSaving(false); }
     };
 
-    // ── Supprimer ──────────────────────────────────────────────────────────
     const handleSupprimer = async (e2) => {
         e2.stopPropagation();
         const id = etablissements[selectionne]?.idEtablissement;
@@ -373,7 +374,6 @@ export default function TabAjoutEtablissement({ declarationContext }) {
 
                 {/* ══ COLONNE GAUCHE ══ */}
                 <div style={{ width: 280, flexShrink: 0 }}>
-
                     <button onClick={handleNouvel} style={{
                         display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                         width: "100%", padding: "13px 16px",
@@ -437,7 +437,6 @@ export default function TabAjoutEtablissement({ declarationContext }) {
                                                 )}
                                             </div>
                                         </div>
-                                        {/* Seulement le bouton supprimer dans la liste */}
                                         {actif && (
                                             <button
                                                 onClick={handleSupprimer}
@@ -467,7 +466,6 @@ export default function TabAjoutEtablissement({ declarationContext }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden" }}>
 
-                        {/* En-tête formulaire */}
                         <div style={{ padding: "18px 24px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 12, background: modeEdition ? "#FEF9EC" : "#FAFAFA" }}>
                             <div style={{ width: 38, height: 38, borderRadius: 10, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", color: C.orange }}>
                                 {modeEdition ? <IconEdit2 /> : <IconBuilding />}
@@ -482,7 +480,6 @@ export default function TabAjoutEtablissement({ declarationContext }) {
 
                         <div style={{ padding: "24px" }}>
 
-                            {/* ── Section 1 : Informations générales ── */}
                             <div style={{ marginBottom: 28 }}>
                                 <SectionTitre label="Informations générales" />
                                 <Champ label="Nom de l'établissement *" value={form.nomEtablissement} onChange={setChamp("nomEtablissement")} />
@@ -496,11 +493,9 @@ export default function TabAjoutEtablissement({ declarationContext }) {
                                 <Champ label="Localisation / Adresse" value={form.localisation} onChange={setChamp("localisation")} />
                             </div>
 
-                            {/* ── Section 2 : Données financières ── */}
                             <div style={{ marginBottom: 24 }}>
                                 <SectionTitre label="Données financières" />
 
-                                {/* Mini totaux */}
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
                                     <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "14px 16px" }}>
                                         <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 4px", fontWeight: 500, textTransform: "uppercase", letterSpacing: 0.5 }}>Total CA</p>
@@ -522,7 +517,6 @@ export default function TabAjoutEtablissement({ declarationContext }) {
                                 </div>
                             </div>
 
-                            {/* ── Alertes ── */}
                             {succes && (
                                 <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "#F0FDF4", border: "1px solid #86EFAC", borderRadius: 8, marginBottom: 16 }}>
                                     <span style={{ color: "#16A34A", display: "flex" }}><IconCheck /></span>
@@ -536,7 +530,6 @@ export default function TabAjoutEtablissement({ declarationContext }) {
                                 </div>
                             )}
 
-                            {/* ── Boutons actions ── */}
                             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
                                 <button onClick={handleNouvel} style={{
                                     background: "#fff", color: "#374151",
@@ -587,7 +580,6 @@ export default function TabAjoutEtablissement({ declarationContext }) {
     );
 }
 
-// ─── Petit composant séparateur de section ─────────────────────────────────
 function SectionTitre({ label }) {
     return (
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>

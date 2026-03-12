@@ -229,31 +229,26 @@ export default function PageMonProfil() {
     return (
         <main style={{ flex: 1, background: "#F3F4F6", display: "flex", flexDirection: "column" }}>
 
-            {/* ── Titre ─────────────────────────────────────────────────────── */}
+            {/* ── Titre — centré ── */}
             <div style={{
                 background: "#F3F4F6", marginTop: 22, width: "100%",
                 padding: "20px 24px", border: "none",
-                display: "flex", textAlign: "center", justifyContent: "space-between",
+                display: "flex", justifyContent: "center",
             }}>
-                <h1 style={{ fontSize: 19, fontWeight: 700, color: C.textDark, position: "relative", textAlign: "center" }}>
-                    Mettre à jour les informations de votre profile
+                <h1 style={{ fontSize: 19, fontWeight: 700, color: C.textDark, margin: 0, textAlign: "center" }}>
+                    Mettre à jour les informations de votre profil
                 </h1>
             </div>
 
-            <div style={{ padding: "24px 18px 60px", display: "flex", gap: 24, flexWrap: "wrap" }}>
-
-                {/* ── Panneau gauche : switcher de profils (masqué - géré manuellement en BD) ── */}
-                {/* Les profils restent en BD, le profil actif est géré via profilActif dans mockData */}
-
-                {/* ── Panneau droit : formulaire ───────────────────────────── */}
-                <div style={{ flex: 1, minWidth: 300 }}>
+            {/* ── Formulaire centré et moins large ── */}
+            <div style={{ padding: "24px 18px 60px", display: "flex", justifyContent: "center" }}>
+                <div style={{ width: "100%", maxWidth: 975 }}>
                     <div style={{
                         background: "#fff", borderRadius: 10,
                         padding: "40px 48px 36px",
                         boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
                         border: "1px solid #E5E7EB",
                     }}>
-
 
                         {loading ? (
                             <div style={{ textAlign: "center", padding: "40px 0", color: C.textGrey }}>

@@ -18,38 +18,29 @@ export function PageStep1({ setPage, setDeclarationContext }) {
 
     return (
         <main style={{ padding: "24px 24px 40px", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
-            <div style={{ background: C.white, borderRadius: 8, padding: "20px 24px", boxShadow: C.shadow }}>
-                <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Nouvelle Déclaration</h1>
-                <p style={{ fontSize: 13, color: C.textGrey, margin: "4px 0 0" }}>
-                    Sélectionnez l&apos;exercice fiscal pour commencer
-                </p>
+            <div style={{ background: C.white, borderRadius: 7, padding: "15px 24px", boxShadow: C.shadow }}>
+                <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Nouvelle Déclaration</h1>
             </div>
 
             <div style={{
-                background: C.white, borderRadius: 10, boxShadow: C.shadow, flex: 1,
+                background: C.white, borderRadius: 0, boxShadow: C.shadow, flex: 1,
                 display: "flex", flexDirection: "column", justifyContent: "center",
                 alignItems: "center", padding: "60px 40px", gap: 20,
             }}>
-                <div style={{ width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", gap: 18 }}>
+                <div style={{ width: "100%", maxWidth: "80%", display: "flex", flexDirection: "column", gap: 18 }}>
                     <div>
-                        <label style={{ fontSize: 13, fontWeight: 600, color: C.textMid, display: "block", marginBottom: 6 }}>
-                            Exercice fiscal
+                        <label style={{ fontSize: 15, fontWeight: 600, color: C.textMid, display: "block", marginBottom: 18, letterSpacing: 1.5}}>
+                            Veuillez sélectionner l'exercice pour cette déclaration
                         </label>
                         <select value={exercice} onChange={(e) => setExercice(e.target.value)} style={{
-                            width: "100%", border: `1px solid ${C.border}`, borderRadius: 8,
-                            padding: "12px 14px", fontSize: 14, color: C.textMid,
+                            width: "100%", border: `1px solid ${C.border}`, borderRadius: 6,
+                            padding: "12px 5px", fontSize: 14, color: C.textMid,
                             background: C.white, cursor: "pointer", outline: "none",
                         }}>
                             {[2025, 2024, 2023, 2022].map(y => (
                                 <option key={y} value={y}>Exercice {y}</option>
                             ))}
                         </select>
-                    </div>
-                    <div style={{
-                        background: "#fffbeb", border: "1px solid #fde68a",
-                        borderRadius: 8, padding: "12px 16px", fontSize: 13, color: "#92400e",
-                    }}>
-                        ℹ La déclaration sera créée après validation dans le récapitulatif.
                     </div>
                 </div>
             </div>
