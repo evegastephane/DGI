@@ -531,18 +531,38 @@ function PagePaiement({ avis, onRetour, contribuable }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// MENU ••• ACTIONS — inchangé (logique d'origine)
+// MENU ••• ACTIONS
+// SEUL CHANGEMENT : dropdown en position:fixed calculé via getBoundingClientRect()
+// pour échapper au overflow:hidden du conteneur tableau.
 // ════════════════════════════════════════════════════════════════════════════
 function ActionMenu({ avis, onPayer }) {
     const [open,        setOpen]        = useState(false);
     const [downloading, setDownloading] = useState(false);
-    const ref = useRef(null);
+    const [menuPos,     setMenuPos]     = useState({ top: 0, right: 0 });
+    const btnRef  = useRef(null);
+    const menuRef = useRef(null);
 
     useEffect(() => {
-        const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        const close = (e) => {
+            if (
+                menuRef.current && !menuRef.current.contains(e.target) &&
+                btnRef.current  && !btnRef.current.contains(e.target)
+            ) setOpen(false);
+        };
         document.addEventListener("mousedown", close);
         return () => document.removeEventListener("mousedown", close);
     }, []);
+
+    const handleToggle = () => {
+        if (!open && btnRef.current) {
+            const rect = btnRef.current.getBoundingClientRect();
+            setMenuPos({
+                top:   rect.bottom + 4,
+                right: window.innerWidth - rect.right,
+            });
+        }
+        setOpen(o => !o);
+    };
 
     const handleTelecharger = async (type) => {
         setOpen(false); setDownloading(true);
@@ -565,22 +585,35 @@ function ActionMenu({ avis, onPayer }) {
     );
 
     return (
-        <td style={{ padding: "14px 16px", textAlign: "center", position: "relative" }} ref={ref}>
-            <button onClick={() => setOpen(!open)} style={{
-                background: "none", border: "none", cursor: "pointer",
-                color: "#9CA3AF", fontSize: 22, letterSpacing: 2,
-                padding: "4px 8px", borderRadius: 4, lineHeight: 1,
-                display: "flex", alignItems: "center",
-            }}>
+        <td style={{ padding: "14px 16px", textAlign: "center" }}>
+            <button
+                ref={btnRef}
+                onClick={handleToggle}
+                style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: "#9CA3AF", fontSize: 22, letterSpacing: 2,
+                    padding: "4px 8px", borderRadius: 4, lineHeight: 1,
+                    display: "flex", alignItems: "center",
+                }}>
                 {downloading ? "..." : "•••"}
             </button>
+
             {open && (
-                <div style={{
-                    position: "absolute", right: 8, top: "100%", zIndex: 300,
-                    background: C.white, border: `1px solid #E5E7EB`,
-                    borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                    minWidth: 230, overflow: "hidden",
-                }}>
+                <div
+                    ref={menuRef}
+                    style={{
+                        position: "fixed",
+                        top:   menuPos.top,
+                        right: menuPos.right,
+                        zIndex: 9999,
+                        background: C.white,
+                        border: `1px solid #E5E7EB`,
+                        borderRadius: 8,
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                        minWidth: 230,
+                        overflow: "hidden",
+                    }}
+                >
                     {item(() => handleTelecharger("avis"),   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>, "Télécharger l'avis",   downloading)}
                     <div style={{ height: 1, background: "#F3F4F6" }} />
                     {item(() => handleTelecharger("accuse"), <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>, "Télécharger l'accusé", downloading)}
