@@ -499,8 +499,7 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
                     <div style={{ flex: 1, paddingRight: 24 }}>
                         <h3 style={{ color: '#a66a22', fontWeight: 700, fontSize: 17, margin: '0 0 4px' }}>Info</h3>
                         <p style={{ color: '#a66a22', fontSize: 14, margin: 0, lineHeight: 1.6 }}>
-                            Madame, Mademoiselle, Monsieur, la déclaration de l'Impôt sur les Revenus des Personnes
-                            Physiques que vous allez souscrire est importante pour vous-même et pour le Cameroun.
+                            Madame, Mademoiselle, Monsieur, la déclaration de l'Impôt auquel vous allez souscrire est importante pour vous-même et pour le Cameroun.
                             Elle constitue un acte fondamental par lequel vous exprimez à juste titre votre
                             appartenance à la collectivité nationale.
                         </p>
@@ -523,7 +522,7 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
                     icon={Folder}
                     iconBg="#dbeafe"
                     iconColor="#3b82f6"
-                    label="DPR Générées"
+                    label="Déclarations Générées"
                     value={dprGenerees}
                     sub={`${dprGenerees} déclaration(s) pour ${exercice}`}
                     subColor="#6b7280"
@@ -532,9 +531,9 @@ export default function Dashboard({ refreshKey = 0, setPage }) {
                     icon={ClipboardList}
                     iconBg="#fef9c3"
                     iconColor="#ca8a04"
-                    label="DPR Soumises"
+                    label="Déclarations Soumises"
                     value={dprSoumises}
-                    sub={dprGenerees > 0 ? `^ ${pctSoumises}% des DPR générées` : 'Aucune DPR'}
+                    sub={dprGenerees > 0 ? `^ ${pctSoumises}% des déclarations générées` : 'Aucune DPR'}
                     subColor="#f58220"
                 />
             </div>
